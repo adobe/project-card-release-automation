@@ -1,7 +1,7 @@
 {
-  "name": "javascript-action",
+  "name": "project-card-release-automation",
   "version": "1.0.0",
-  "description": "JavaScript Action Template",
+  "description": "Github action to automate semantic versioning",
   "main": "index.js",
   "scripts": {
     "lint": "eslint .",
@@ -19,11 +19,11 @@
     "JavaScript"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/actions/javascript-action/issues"
+    "url": "https://github.com/jonsnyder/project-card-release-automation/issues"
   },
-  "homepage": "https://github.com/actions/javascript-action#readme",
+  "homepage": "https://github.com/jonsnyder/project-card-release-automation#readme",
   "dependencies": {
     "@actions/core": "^1.2.5",
     "@actions/github": "^4.0.0",
