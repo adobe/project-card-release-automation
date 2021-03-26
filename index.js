@@ -1,3 +1,3 @@
-const { run, runCommand } = require("lib/container");
+const { run, runCommand } = require("./lib/container");
 
 run(runCommand);
