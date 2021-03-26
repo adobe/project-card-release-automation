@@ -9,7 +9,7 @@ Object.keys(container).forEach(key => {
 
 const test = func => {
   const handler = {
-    get(target, property, reciever) {
+    get(target, property) {
       if (!definedKeys[property]) {
         fail(`No property defined on container: "${property}".`);
       }
@@ -31,7 +31,7 @@ describe("container", () => {
           const inject = require(`../${file}`);
           test(inject);
 
-          const [filename, match] = file.match(/inject([^/]+).js/);
+          const [, match] = file.match(/inject([^/]+).js/);
           const property = `${match[0].toLowerCase()}${match.substring(1)}`;
           if (!definedKeys[property]) {
             fail(`No property defined on container: "${property}"`);
