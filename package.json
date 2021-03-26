@@ -30,6 +30,7 @@
     "semver": "^7.3.5"
   },
   "devDependencies": {
+    "@octokit/rest": "^18.5.0",
     "@vercel/ncc": "^0.27.0",
     "eslint": "^7.4.0",
     "glob": "^7.1.6",

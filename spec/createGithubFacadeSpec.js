@@ -12,7 +12,8 @@ describe("githubFacade", () => {
       git: jasmine.createSpyObj("octokit.git", ["listMatchingRefs"]),
       request: jasmine.createSpy("octokit.request"),
       issues: jasmine.createSpyObj("octokit.issues", ["create"]),
-      projects: jasmine.createSpyObj("octokit.projects", ["listForRepo", "listColumns", "createCard"])
+      projects: jasmine.createSpyObj("octokit.projects", ["listForRepo", "listColumns", "createCard"]),
+      repos: jasmine.createSpyObj("octokit.repos", ["getContent"])
     };
     githubFacade = createGithubFacade({ octokit, owner, repo });
   });
@@ -174,4 +175,31 @@ describe("githubFacade", () => {
       });
     });
   });
+
+  describe("getPackageVersion", () => {
+    const content = `ewogICJuYW1lIjogImFjdGlvbnMtc2FuZGJveCIsCiAgInZlcnNpb24iOiAi
+    Mi4xLjAiLAogICJkZXNjcmlwdGlvbiI6ICJyZXBvIHRvIHRlc3QgZ2l0aHVi
+    IGFjdGlvbnMiLAogICJtYWluIjogImluZGV4LmpzIiwKICAic2NyaXB0cyI6
+    IHsKICAgICJ0ZXN0IjogInRlc3QiCiAgfSwKICAicmVwb3NpdG9yeSI6IHsK
+    ICAgICJ0eXBlIjogImdpdCIsCiAgICAidXJsIjogImdpdCtodHRwczovL2dp
+    dGh1Yi5jb20vam9uc255ZGVyL2FjdGlvbnMtc2FuZGJveC5naXQiCiAgfSwK
+    ICAiYXV0aG9yIjogIiIsCiAgImxpY2Vuc2UiOiAiSVNDIiwKICAiYnVncyI6
+    IHsKICAgICJ1cmwiOiAiaHR0cHM6Ly9naXRodWIuY29tL2pvbnNueWRlci9h
+    Y3Rpb25zLXNhbmRib3gvaXNzdWVzIgogIH0sCiAgImhvbWVwYWdlIjogImh0
+    dHBzOi8vZ2l0aHViLmNvbS9qb25zbnlkZXIvYWN0aW9ucy1zYW5kYm94I3Jl
+    YWRtZSIsCiAgImRldkRlcGVuZGVuY2llcyI6IHsKICAgICJAYWN0aW9ucy9n
+    aXRodWIiOiAiXjQuMC4wIiwKICAgICJAb2N0b2tpdC9yZXN0IjogIl4xOC4z
+    LjUiLAogICAgInNlbXZlciI6ICJeNy4zLjQiCiAgfQp9Cg==
+`;
+    const encoding = "base64"
+    it("gets the package version", async () => {
+      octokit.repos.getContent.and.returnValue({
+        data: { content, encoding }
+      });
+      expect(await githubFacade.getPackageVersion("myref")).toEqual("2.1.0");
+      expect(octokit.repos.getContent).toHaveBeenCalledOnceWith({
+        owner, repo, path: "package.json", ref: "myref"
+      });
+    })
+  })
 });
