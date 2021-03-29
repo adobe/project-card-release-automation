@@ -46,7 +46,7 @@ const injectHandleProjectCardMove = __nccwpck_require__(9704);
 const injectHandlePush = __nccwpck_require__(1245);
 const injectInitializeCard = __nccwpck_require__(7763);
 const injectRun = __nccwpck_require__(4560);
-const injectSetOutputVars = __nccwpck_require__(8123);
+const injectTriggerRelase = __nccwpck_require__(6861);
 const injectValidateNewVersion = __nccwpck_require__(9210);
 const memoizeGetters = __nccwpck_require__(470);
 const process = __nccwpck_require__(1765);
@@ -78,8 +78,8 @@ module.exports = memoizeGetters({
       contentUrl
     };
   },
-  get auth() {
-    return readEnvironmentVariable("GITHUB_AUTH");
+  get token() {
+    return this.core.getInput("token");
   },
   get ownerAndRepo() {
     const repository = readEnvironmentVariable("GITHUB_REPOSITORY");
@@ -115,6 +115,9 @@ module.exports = memoizeGetters({
   get eventName() {
     return this.githubContext.eventName;
   },
+  get workflowId() {
+    return this.core.getInput("workflowId");
+  },
   get releaseType() {
     return this.core.getInput("releaseType");
   },
@@ -136,8 +139,8 @@ module.exports = memoizeGetters({
   get run() {
     return injectRun(this);
   },
-  get setOutputVars() {
-    return injectSetOutputVars(this);
+  get triggerRelease() {
+    return injectTriggerRelease(this);
   },
   get validateNewVersion() {
     return injectValidateNewVersion(this);
@@ -218,6 +221,15 @@ module.exports = ({ octokit, owner, repo }) => {
       const packageJson = Buffer.from(content, encoding).toString();
       const package = JSON.parse(packageJson);
       return package.version;
+    },
+    async dispatchWorkflow(workflow_id, ref, inputs) {
+      await octokit.action.createWorkflowDispatch({
+        owner,
+        repo,
+        workflow_id,
+        ref,
+        inputs
+      });
     }
   }
 };
@@ -358,25 +370,18 @@ module.exports = ({ core }) => async func => {
 
 /***/ }),
 
-/***/ 8123:
+/***/ 6861:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const assert = __nccwpck_require__(5957);
 
-module.exports = ({ eventName, core, ...container }) => async () => {
+module.exports = ({ eventName, githubFacade, workflowId, ...container }) => async () => {
   assert(eventName === "project_card" || eventName === "push", `Unknown event: ${eventName}.`);
 
   const handler = eventName === "project_card" ? container.handleProjectCardMove : container.handlePush;
 
-  try {
-    const { ref, inputs } = await handler();
-    core.setOutput("triggerWorkflow", "true");
-    core.setOutput("ref", ref);
-    core.setOutput("inputs", JSON.stringify(inputs));
-  } catch (error) {
-    core.setOutput("triggerWorkflow", "false");
-    throw error;
-  }
+  const { ref, inputs } = await handler();
+  await githubFacade.dispatchWorkflow(workflowId, ref, inputs);
 }
 
 /***/ }),

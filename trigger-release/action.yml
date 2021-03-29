@@ -1,13 +1,12 @@
 name: 'Project Card Release Automation'
 description: 'Automate semantic versioning using Github project cards.'
 inputs:
-  command:
-    description: 'The command to run (trigger-release, initialize-card, or validate-version)'
+  workflowId:
     required: true
-  releaseType:
-    description: 'For initialize-card, the semantic version release type (major, minor, or patch)'
-  newVersion:
-    description: 'For validate-version, the new version to update to'
+    description: 'The file name of the workflow to run.'
+  token:
+    required: true
+    description: 'Github token to use to trigger the release. (This must be a different token than the default github-actions token.)'
 runs:
   using: 'node12'
   main: 'dist/index.js'

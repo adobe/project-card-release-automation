@@ -2,15 +2,6 @@ require('./sourcemap-register.js');module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 2862:
-/***/ ((__unused_webpack_module, __unused_webpack_exports, __nccwpck_require__) => {
-
-const { run, initializeCard } = __nccwpck_require__(2499);
-
-run(initializeCard);
-
-/***/ }),
-
 /***/ 5957:
 /***/ ((module) => {
 
@@ -46,9 +37,8 @@ const injectHandleProjectCardMove = __nccwpck_require__(9704);
 const injectHandlePush = __nccwpck_require__(1245);
 const injectInitializeCard = __nccwpck_require__(7763);
 const injectRun = __nccwpck_require__(4560);
-const injectSetOutputVars = __nccwpck_require__(8123);
+const injectTriggerRelase = __nccwpck_require__(6861);
 const injectValidateNewVersion = __nccwpck_require__(9210);
-const injectRunCommand = __nccwpck_require__(2538);
 const memoizeGetters = __nccwpck_require__(470);
 const process = __nccwpck_require__(1765);
 const core = __nccwpck_require__(2186);
@@ -79,8 +69,8 @@ module.exports = memoizeGetters({
       contentUrl
     };
   },
-  get auth() {
-    return readEnvironmentVariable("GITHUB_AUTH");
+  get token() {
+    return this.core.getInput("token");
   },
   get ownerAndRepo() {
     const repository = readEnvironmentVariable("GITHUB_REPOSITORY");
@@ -116,8 +106,8 @@ module.exports = memoizeGetters({
   get eventName() {
     return this.githubContext.eventName;
   },
-  get command() {
-    return this.core.getInput("command");
+  get workflowId() {
+    return this.core.getInput("workflowId");
   },
   get releaseType() {
     return this.core.getInput("releaseType");
@@ -140,14 +130,11 @@ module.exports = memoizeGetters({
   get run() {
     return injectRun(this);
   },
-  get setOutputVars() {
-    return injectSetOutputVars(this);
+  get triggerRelease() {
+    return injectTriggerRelease(this);
   },
   get validateNewVersion() {
     return injectValidateNewVersion(this);
-  },
-  get runCommand() {
-    return injectRunCommand(this);
   },
   get core() {
     return core;
@@ -225,6 +212,15 @@ module.exports = ({ octokit, owner, repo }) => {
       const packageJson = Buffer.from(content, encoding).toString();
       const package = JSON.parse(packageJson);
       return package.version;
+    },
+    async dispatchWorkflow(workflow_id, ref, inputs) {
+      await octokit.action.createWorkflowDispatch({
+        owner,
+        repo,
+        workflow_id,
+        ref,
+        inputs
+      });
     }
   }
 };
@@ -365,50 +361,18 @@ module.exports = ({ core }) => async func => {
 
 /***/ }),
 
-/***/ 2538:
+/***/ 6861:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const assert = __nccwpck_require__(5957);
 
-module.exports = ({ command, run, ...container }) => async () => {
-
-  assert(command === "initialize-card" || command === "trigger-release" || command === "validate-version",
-    `Unknown command: ${command}`
-  );
-
-  if (command === "initialize-card") {
-    const { initializeCard } = container;
-    await run(initializeCard);
-  } else if (command === "trigger-release") {
-    const { setOutputVars } = container;
-    await run(setOutputVars);
-  } else if (command === "validate-version") {
-    const { validateNewVersion } = container;
-    await run(validateNewVersion);
-  }
-}
-
-/***/ }),
-
-/***/ 8123:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-const assert = __nccwpck_require__(5957);
-
-module.exports = ({ eventName, core, ...container }) => async () => {
+module.exports = ({ eventName, githubFacade, workflowId, ...container }) => async () => {
   assert(eventName === "project_card" || eventName === "push", `Unknown event: ${eventName}.`);
 
   const handler = eventName === "project_card" ? container.handleProjectCardMove : container.handlePush;
 
-  try {
-    const { ref, inputs } = await handler();
-    core.setOutput("triggerWorkflow", "true");
-    core.setOutput("ref", ref);
-    core.setOutput("inputs", JSON.stringify(inputs));
-  } catch (error) {
-    core.setOutput("triggerWorkflow", "false");
-    throw error;
-  }
+  const { ref, inputs } = await handler();
+  await githubFacade.dispatchWorkflow(workflowId, ref, inputs);
 }
 
 /***/ }),
@@ -9420,6 +9384,15 @@ try {
 
 /***/ }),
 
+/***/ 6708:
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { run, triggerRelease } = __nccwpck_require__(2499);
+
+run(triggerRelease);
+
+/***/ }),
+
 /***/ 2877:
 /***/ ((module) => {
 
@@ -9578,7 +9551,7 @@ module.exports = require("zlib");;
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nccwpck_require__(2862);
+/******/ 	return __nccwpck_require__(6708);
 /******/ })()
 ;
 //# sourceMappingURL=index.js.map
