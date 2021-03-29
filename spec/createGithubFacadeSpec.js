@@ -13,7 +13,8 @@ describe("githubFacade", () => {
       request: jasmine.createSpy("octokit.request"),
       issues: jasmine.createSpyObj("octokit.issues", ["create"]),
       projects: jasmine.createSpyObj("octokit.projects", ["listForRepo", "listColumns", "createCard"]),
-      repos: jasmine.createSpyObj("octokit.repos", ["getContent"])
+      repos: jasmine.createSpyObj("octokit.repos", ["getContent"]),
+      actions: jasmine.createSpyObj("octokit.actions", ["createWorkflowDispatch"])
     };
     githubFacade = createGithubFacade({ octokit, owner, repo });
   });
@@ -201,5 +202,14 @@ describe("githubFacade", () => {
         owner, repo, path: "package.json", ref: "myref"
       });
     })
-  })
+  });
+
+  describe("dispatchWorkflow", () => {
+    it("creates a workflow dispatch", async () => {
+      await githubFacade.dispatchWorkflow("myworkflowid", "myref", { version: "myversion" });
+      expect(octokit.actions.createWorkflowDispatch).toHaveBeenCalledOnceWith({
+        owner, repo, workflow_id: "myworkflowid", ref: "myref", inputs: { version: "myversion" }
+      });
+    });
+  });
 });

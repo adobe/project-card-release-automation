@@ -214,7 +214,7 @@ module.exports = ({ octokit, owner, repo }) => {
       return package.version;
     },
     async dispatchWorkflow(workflow_id, ref, inputs) {
-      await octokit.action.createWorkflowDispatch({
+      await octokit.actions.createWorkflowDispatch({
         owner,
         repo,
         workflow_id,
