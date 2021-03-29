@@ -1,0 +1,9 @@
+name: 'Initialize Project Card Release'
+description: 'Create a project card with a release version.'
+inputs:
+  releaseType:
+    description: 'The semantic version release type (major, minor, or patch)'
+    required: true
+runs:
+  using: 'node12'
+  main: 'dist/initialize-card/index.js'
