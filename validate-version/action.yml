@@ -1,13 +1,11 @@
-name: 'Project Card Release Automation'
-description: 'Automate semantic versioning using Github project cards.'
+name: 'Validate Release Version'
+description: 'Validate that the new version is valid, and increasing.'
 inputs:
-  command:
-    description: 'The command to run (trigger-release, initialize-card, or validate-version)'
+  version:
+    description: 'The new version.'
     required: true
-  releaseType:
-    description: 'For initialize-card, the semantic version release type (major, minor, or patch)'
-  newVersion:
-    description: 'For validate-version, the new version to update to'
+  token:
+    description: 'The github token to use.'
 runs:
   using: 'node12'
   main: 'dist/index.js'

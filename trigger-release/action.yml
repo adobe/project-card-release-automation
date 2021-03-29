@@ -1,5 +1,5 @@
-name: 'Project Card Release Automation'
-description: 'Automate semantic versioning using Github project cards.'
+name: 'Trigger a Release'
+description: 'Trigger a release based on a card move or a push.'
 inputs:
   workflowId:
     required: true

@@ -1,6 +1,9 @@
 name: 'Initialize Project Card Release'
 description: 'Create a project card with a release version.'
 inputs:
+  token:
+    description: 'The github token to use'
+    required: true
   releaseType:
     description: 'The semantic version release type (major, minor, or patch)'
     required: true

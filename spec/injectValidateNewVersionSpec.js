@@ -6,7 +6,7 @@ describe("validateNewVersion", () => {
     const githubFacade = jasmine.createSpyObj("githubFacade", ["getPackageVersion"]);
     githubFacade.getPackageVersion.and.returnValue(packageVersion);
     const validateNewVersion = injectValidateNewVersion({
-      githubFacade, ref: "myref", newVersion
+      githubFacade, ref: "myref", version: newVersion
     })
     await validateNewVersion();
   }

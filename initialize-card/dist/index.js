@@ -121,8 +121,8 @@ module.exports = memoizeGetters({
   get releaseType() {
     return this.core.getInput("releaseType");
   },
-  get newVersion() {
-    return this.core.getInput("newVersion");
+  get version() {
+    return this.core.getInput("version");
   },
   get handleProjectCardMove() {
     return injectHandleProjectCardMove(this);
@@ -393,13 +393,13 @@ module.exports = ({ eventName, githubFacade, workflowId, ...container }) => asyn
 const semver = __nccwpck_require__(1383);
 const assert = __nccwpck_require__(5957);
 
-module.exports = ({ githubFacade, newVersion, ref }) => async () => {
+module.exports = ({ githubFacade, version, ref }) => async () => {
 
-  assert(semver.valid(newVersion), `New version is not a valid semantic version: ${newVersion}`);
+  assert(semver.valid(version), `New version is not a valid semantic version: ${version}`);
 
   const packageVersion = await githubFacade.getPackageVersion(ref);
 
-  assert(semver.gt(newVersion, packageVersion), `Versions must be increasing. Attempted ${packageVersion} => ${newVersion}`);
+  assert(semver.gt(version, packageVersion), `Versions must be increasing. Attempted ${packageVersion} => ${version}`);
 }
 
 /***/ }),
