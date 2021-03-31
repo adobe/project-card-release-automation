@@ -1815,7 +1815,7 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
-const VERSION = "3.3.1";
+const VERSION = "3.3.2";
 
 class Octokit {
   constructor(options = {}) {
