@@ -1,4 +1,4 @@
-const createGithubFacade = require("../lib/createGithubFacade");
+const createGithubFacade = require("../lib/injectGithubFacade");
 
 describe("githubFacade", () => {
 

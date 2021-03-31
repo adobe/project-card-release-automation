@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const createGithubFacade = require("./lib/createGithubFacade");
+const createGithubFacade = require("./lib/injectGithubFacade");
+
 
 const { Octokit } = require("@octokit/rest");
 
@@ -24,7 +25,8 @@ const githubFacade = createGithubFacade({ octokit, owner, repo });
   //await githubFacade.createIssueComment(issueNumber, "Released 2.2.0-alpha.1");
   //await githubFacade.closeIssue(issueNumber);
   console.log(issueNumber);
-  await githubFacade.addLabelToIssue(issueNumber, "release");
+  //await githubFacade.addLabelToIssue(issueNumber, "release");
 })();
 
 
+console.log("Hello World");

@@ -31,8 +31,7 @@ module.exports = (success, message, exitCode = 1) => {
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const github = __nccwpck_require__(5438);
-const assert = __nccwpck_require__(5957);
-const createGithubFacade = __nccwpck_require__(3871);
+const injectGithubFacade = __nccwpck_require__(3045);
 const injectHandleProjectCardMove = __nccwpck_require__(9704);
 const injectHandlePush = __nccwpck_require__(1245);
 const injectInitializeCard = __nccwpck_require__(7763);
@@ -41,15 +40,26 @@ const injectRun = __nccwpck_require__(4560);
 const injectTriggerRelease = __nccwpck_require__(6861);
 const injectValidateNewVersion = __nccwpck_require__(9210);
 const memoizeGetters = __nccwpck_require__(470);
-const process = __nccwpck_require__(1765);
 const core = __nccwpck_require__(2186);
 
-const readEnvironmentVariable = name => {
-  assert(process.env[name] != null, `The environment variable ${name} is required`);
-  return process.env[name];
-}
-
 module.exports = memoizeGetters({
+  // Action Inputs:
+  get projectNumber() {
+    return Number(this.core.getInput("projectNumber"));
+  },
+  get releaseType() {
+    return this.core.getInput("releaseType");
+  },
+  get token() {
+    return this.core.getInput("token") || this.githubContext.token;
+  },
+  get version() {
+    return this.core.getInput("version");
+  },
+  get workflowId() {
+    return this.core.getInput("workflowId");
+  },
+  // Github Context Inputs:
   get githubContext() {
     const {
       ref,
@@ -60,40 +70,21 @@ module.exports = memoizeGetters({
           column_url: columnUrl,
           content_url: contentUrl,
         } = {}
-      } = {}
+      } = {},
+      repository,
+      token
      } = github.context;
+    const [ owner, repo ] = repository.split("/");
     return {
       ref,
       eventName,
       projectUrl,
       columnUrl,
-      contentUrl
+      contentUrl,
+      repo,
+      owner,
+      token
     };
-  },
-  get token() {
-    return this.core.getInput("token");
-  },
-  get ownerAndRepo() {
-    const repository = readEnvironmentVariable("GITHUB_REPOSITORY");
-    assert(repository.includes("/"), "The GITHUB_REPOSITORY environment variable should be of the form ${owner}/${repo}");
-    return repository.split("/");
-  },
-  get owner() {
-    return this.ownerAndRepo[0];
-  },
-  get repo() {
-    return this.ownerAndRepo[1];
-  },
-  get octokit() {
-    return github.getOctokit(this.token, {
-      previews: ["inertia-preview"] // inertia is the github codename for Projects
-    });
-  },
-  get githubFacade() {
-    return createGithubFacade(this);
-  },
-  get projectUrl() {
-    return this.githubContext.projectUrl;
   },
   get contentUrl() {
     return this.githubContext.contentUrl;
@@ -101,32 +92,45 @@ module.exports = memoizeGetters({
   get columnUrl() {
     return this.githubContext.columnUrl;
   },
-  get ref() {
-    return this.githubContext.ref;
-  },
   get eventName() {
     return this.githubContext.eventName;
   },
-  get workflowId() {
-    return this.core.getInput("workflowId");
+  get projectUrl() {
+    return this.githubContext.projectUrl;
   },
-  get releaseType() {
-    return this.core.getInput("releaseType");
+  get ref() {
+    return this.githubContext.ref;
   },
-  get version() {
-    return this.core.getInput("version");
+  get owner() {
+    return this.githubContext.owner;
+  },
+  get repo() {
+    return this.githubContext.repo;
+  },
+  // Github objects
+  get core() {
+    return core;
+  },
+  get octokit() {
+    return github.getOctokit(this.token, {
+      previews: ["inertia-preview"] // inertia is the github codename for Projects
+    });
+  },
+  // Injected objects
+  get githubFacade() {
+    return injectGithubFacade(this);
   },
   get handleProjectCardMove() {
     return injectHandleProjectCardMove(this);
-  },
-  get projectNumber() {
-    return 1;
   },
   get handlePush() {
     return injectHandlePush(this);
   },
   get initializeCard() {
     return injectInitializeCard(this);
+  },
+  get recordRelease() {
+    return injectRecordRelease(this);
   },
   get run() {
     return injectRun(this);
@@ -136,18 +140,12 @@ module.exports = memoizeGetters({
   },
   get validateNewVersion() {
     return injectValidateNewVersion(this);
-  },
-  get core() {
-    return core;
-  },
-  get recordRelease() {
-    return injectRecordRelease(this);
   }
 });
 
 /***/ }),
 
-/***/ 3871:
+/***/ 3045:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const assert = __nccwpck_require__(5957);
@@ -275,8 +273,8 @@ module.exports = ({
 
   const findVersionBranch = async version => {
     const versionParts = version.split(".");
-    const patchBranch = `${versionParts[0]}.${versionParts[1]}.x`;
-    const minorBranch = `${versionParts[0]}.x`;
+    const patchBranch = `v${versionParts[0]}.${versionParts[1]}`;
+    const minorBranch = `v${versionParts[0]}`;
 
     if (await githubFacade.hasBranch(patchBranch)) {
       return `refs/heads/${patchBranch}`;
@@ -9512,14 +9510,6 @@ module.exports = require("os");;
 
 "use strict";
 module.exports = require("path");;
-
-/***/ }),
-
-/***/ 1765:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("process");;
 
 /***/ }),
 

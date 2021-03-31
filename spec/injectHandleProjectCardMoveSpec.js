@@ -87,16 +87,16 @@ describe("handleProjectCardMove", () => {
     expect(version).toEqual("1.2.3-beta.0");
   });
 
-  it("uses the 1.x branch", async () => {
-    githubFacade.hasBranch.and.callFake(branchName => Promise.resolve(branchName === "1.x"));
+  it("uses the v1 branch", async () => {
+    githubFacade.hasBranch.and.callFake(branchName => Promise.resolve(branchName === "v1"));
     const { ref } = await handleProjectCardMove();
-    expect(ref).toEqual("refs/heads/1.x");
+    expect(ref).toEqual("refs/heads/v1");
   });
 
-  it("uses the 1.2.x branch when 1.x and 1.2.x are defined", async () => {
+  it("uses the v1.2 branch when v1 and v1.2 are defined", async () => {
     githubFacade.hasBranch.and.returnValue(Promise.resolve(true))
     const { ref } = await handleProjectCardMove();
-    expect(ref).toEqual("refs/heads/1.2.x");
+    expect(ref).toEqual("refs/heads/v1.2");
   });
 
   it("throws an error when the column name has a space in it.", async () => {
