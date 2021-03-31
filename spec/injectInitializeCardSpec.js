@@ -61,7 +61,8 @@ describe("initializeCard", () => {
     await initializeCard();
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "2.0.0",
-      body: jasmine.anything()
+      body: jasmine.anything(),
+      label: "release"
     });
   });
 
@@ -71,7 +72,8 @@ describe("initializeCard", () => {
     await initializeCard();
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.3.0",
-      body: jasmine.anything()
+      body: jasmine.anything(),
+      label: "release"
     });
   });
 
@@ -81,7 +83,8 @@ describe("initializeCard", () => {
     await initializeCard();
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.2.4",
-      body: jasmine.anything()
+      body: jasmine.anything(),
+      label: "release"
     });
   });
 

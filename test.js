@@ -15,7 +15,16 @@ const octokit = new Octokit({
 
 const githubFacade = createGithubFacade({ octokit, owner, repo });
 
-githubFacade.getPackageVersion("refs/heads/main").then(version => {
-  console.log(version);
-})
+//githubFacade.getPackageVersion("refs/heads/main").then(version => {
+//  console.log(version);
+//})
+
+(async () => {
+  const issueNumber = await githubFacade.findIssueNumberByIssueTitle("2.2.0");
+  //await githubFacade.createIssueComment(issueNumber, "Released 2.2.0-alpha.1");
+  //await githubFacade.closeIssue(issueNumber);
+  console.log(issueNumber);
+  await githubFacade.addLabelToIssue(issueNumber, "release");
+})();
+
 

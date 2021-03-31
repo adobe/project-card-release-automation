@@ -45,6 +45,7 @@ const createGithubFacade = __nccwpck_require__(3871);
 const injectHandleProjectCardMove = __nccwpck_require__(9704);
 const injectHandlePush = __nccwpck_require__(1245);
 const injectInitializeCard = __nccwpck_require__(7763);
+const injectRecordRelease = __nccwpck_require__(3505);
 const injectRun = __nccwpck_require__(4560);
 const injectTriggerRelease = __nccwpck_require__(6861);
 const injectValidateNewVersion = __nccwpck_require__(9210);
@@ -147,6 +148,9 @@ module.exports = memoizeGetters({
   },
   get core() {
     return core;
+  },
+  get recordRelease() {
+    return injectRecordRelease(this);
   }
 });
 
@@ -180,12 +184,13 @@ module.exports = ({ octokit, owner, repo }) => {
     getByUrl(url) {
       return octokit.request(`GET ${url}`);
     },
-    async createIssue({ title, body }) {
+    async createIssue({ title, body, label }) {
       const { data: { id } } = await octokit.issues.create({
         owner,
         repo,
         title,
-        body
+        body,
+        labels: [label]
       });
       return id;
     },
@@ -230,7 +235,34 @@ module.exports = ({ octokit, owner, repo }) => {
         ref,
         inputs
       });
-    }
+    },
+    async findIssueNumberByIssueTitle(title) {
+      const { data: { items } } = await octokit.search.issuesAndPullRequests({
+        q: `repo:${owner}/${repo} is:issue is:open in:title ${title}`
+      });
+      const issue = items.find(issue => issue.title === title);
+      if (issue) {
+        return issue.number;
+      }
+      throw new Error(`Could not find issue with title ${title}`);
+    },
+    async createIssueComment(issue_number, body) {
+      await octokit.issues.createComment({
+        owner,
+        repo,
+        issue_number,
+        body
+      });
+    },
+    async closeIssue(issue_number) {
+      await octokit.issues.update({
+        owner,
+        repo,
+        issue_number,
+        state: "closed"
+      });
+    },
+
   }
 };
 
@@ -241,7 +273,6 @@ module.exports = ({ octokit, owner, repo }) => {
 
 const semver = __nccwpck_require__(1383);
 const softAssert = __nccwpck_require__(3304);
-
 
 module.exports = ({
   githubFacade,
@@ -273,7 +304,7 @@ module.exports = ({
   softAssert(semver.prerelease(issueTitle) === null, `Issue name in project card should not have prerelease version: ${issueTitle}`);
 
   const { data: { name: columnName } } = await githubFacade.getByUrl(columnUrl);
-  softAssert(columnName !== "New", "Nothing to do when name moved to \"New\"");
+  softAssert(columnName !== "New", "Nothing to do when card moved to \"New\"");
   let newVersion;
   if (columnName === "Release") {
     newVersion = issueTitle;
@@ -337,13 +368,32 @@ module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => as
 
   const issueId = await githubFacade.createIssue({
     title: newVersion,
-    body: `Track progress of release ${newVersion}.`
+    body: `Track progress of release ${newVersion}.`,
+    label: "release"
   });
   const projectId = await githubFacade.fetchProjectId(projectNumber);
   const columnId = await githubFacade.fetchColumnIdByName(projectId, "New");
   await githubFacade.createIssueCard(columnId, issueId);
   core.info(`Created release card: ${newVersion}`);
 };
+
+/***/ }),
+
+/***/ 3505:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const semver = __nccwpck_require__(1383);
+
+module.exports = ({ githubFacade, version }) => async () => {
+
+  const issueTitle = semver.coerce(version).raw;
+  const issueNumber = await githubFacade.findIssueNumberByIssueTitle(issueTitle);
+  await githubFacade.createIssueComment(issueNumber, `Released ${version}`);
+
+  if (semver.prerelease(version) === null) {
+    await githubFacade.closeIssue(issueNumber);
+  }
+}
 
 /***/ }),
 

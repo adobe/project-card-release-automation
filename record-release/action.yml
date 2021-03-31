@@ -1,0 +1,11 @@
+name: 'Record Release'
+description: 'Update the release issue with a comment. Close the issue if this is the final release.'
+inputs:
+  version:
+    description: 'The new version.'
+    required: true
+  token:
+    description: 'The github token to use.'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

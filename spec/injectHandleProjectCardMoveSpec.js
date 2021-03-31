@@ -71,7 +71,7 @@ describe("handleProjectCardMove", () => {
     columnResponse = { data: { name: "New" } };
     await expectSoftError(
       () => handleProjectCardMove(),
-      "Nothing to do when name moved to \"New\""
+      "Nothing to do when card moved to \"New\""
     );
   });
 

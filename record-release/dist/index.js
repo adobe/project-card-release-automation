@@ -9434,12 +9434,12 @@ try {
 
 /***/ }),
 
-/***/ 1359:
+/***/ 2125:
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { run, validateNewVersion } = __nccwpck_require__(2499);
+const { run, recordRelease } = __nccwpck_require__(2499);
 
-run(validateNewVersion);
+run(recordRelease);
 
 /***/ }),
 
@@ -9601,7 +9601,7 @@ module.exports = require("zlib");;
 /******/ 	// module exports must be returned from runtime so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	return __nccwpck_require__(1359);
+/******/ 	return __nccwpck_require__(2125);
 /******/ })()
 ;
 //# sourceMappingURL=index.js.map
