@@ -39,6 +39,7 @@ module.exports = (success, message, exitCode = 1) => {
 /***/ 2499:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+const assert = __nccwpck_require__(5957);
 const github = __nccwpck_require__(5438);
 const injectGithubFacade = __nccwpck_require__(3045);
 const injectHandleProjectCardMove = __nccwpck_require__(9704);
