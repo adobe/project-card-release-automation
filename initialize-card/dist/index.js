@@ -51,7 +51,10 @@ const injectValidateNewVersion = __nccwpck_require__(9210);
 const memoizeGetters = __nccwpck_require__(470);
 const core = __nccwpck_require__(2186);
 
-console.log(JSON.stringify(github.context, null, 2));
+const readEnvironmentVariable = name => {
+  assert(process.env[name] != null, `The environment variable ${name} is required`);
+  return process.env[name];
+}
 
 module.exports = memoizeGetters({
   // Action Inputs:
@@ -81,11 +84,13 @@ module.exports = memoizeGetters({
           column_url: columnUrl,
           content_url: contentUrl,
         } = {}
-      } = {},
-      repository,
-      token
-     } = github.context;
+      } = {}
+    } = github.context;
+    const repository = readEnvironmentVariable("GITHUB_REPOSITORY");
+    assert(repository.includes("/"), "The GITHUB_REPOSITORY environment variable should be of the form ${owner}/${repo}");
     const [ owner, repo ] = repository.split("/");
+    const token = readEnvironmentVariable("GITHUB_TOKEN");
+
     return {
       ref,
       eventName,
