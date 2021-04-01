@@ -4,6 +4,9 @@ inputs:
   version:
     description: 'The new version.'
     required: true
+  token:
+    description: 'The github token to use'
+    required: true
 runs:
   using: 'node12'
   main: 'dist/index.js'

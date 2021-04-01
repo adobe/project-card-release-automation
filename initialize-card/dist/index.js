@@ -66,7 +66,7 @@ module.exports = memoizeGetters({
     return this.core.getInput("releaseType");
   },
   get token() {
-    return this.core.getInput("token") || this.githubContext.token;
+    return this.core.getInput("token");
   },
   get version() {
     return this.core.getInput("version");
@@ -90,7 +90,6 @@ module.exports = memoizeGetters({
     const repository = readEnvironmentVariable("GITHUB_REPOSITORY");
     assert(repository.includes("/"), "The GITHUB_REPOSITORY environment variable should be of the form ${owner}/${repo}");
     const [ owner, repo ] = repository.split("/");
-    const token = readEnvironmentVariable("GITHUB_TOKEN");
 
     return {
       ref,
