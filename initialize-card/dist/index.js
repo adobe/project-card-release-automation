@@ -98,8 +98,7 @@ module.exports = memoizeGetters({
       columnUrl,
       contentUrl,
       repo,
-      owner,
-      token
+      owner
     };
   },
   get contentUrl() {
