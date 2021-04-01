@@ -42,6 +42,8 @@ const injectValidateNewVersion = __nccwpck_require__(9210);
 const memoizeGetters = __nccwpck_require__(470);
 const core = __nccwpck_require__(2186);
 
+console.log(JSON.stringify(github.context, null, 2));
+
 module.exports = memoizeGetters({
   // Action Inputs:
   get projectNumber() {
