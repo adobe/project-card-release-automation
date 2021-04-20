@@ -5,6 +5,7 @@ describe("githubFacade", () => {
   let octokit;
   const owner = "myowner";
   const repo = "myrepo";
+  let fs;
   let githubFacade;
 
   beforeEach(() => {
@@ -13,10 +14,11 @@ describe("githubFacade", () => {
       request: jasmine.createSpy("octokit.request"),
       issues: jasmine.createSpyObj("octokit.issues", ["create"]),
       projects: jasmine.createSpyObj("octokit.projects", ["listForRepo", "listColumns", "createCard"]),
-      repos: jasmine.createSpyObj("octokit.repos", ["getContent"]),
+      repos: jasmine.createSpyObj("octokit.repos", ["getContent", "createRelease", "uploadReleaseAsset"]),
       actions: jasmine.createSpyObj("octokit.actions", ["createWorkflowDispatch"])
     };
-    githubFacade = createGithubFacade({ octokit, owner, repo });
+    fs = jasmine.createSpyObj("fs", ["stat", "readFile"]);
+    githubFacade = createGithubFacade({ octokit, owner, repo, fs });
   });
 
   describe("hasBranch", () => {
@@ -209,6 +211,43 @@ describe("githubFacade", () => {
       await githubFacade.dispatchWorkflow("myworkflowid", "myref", { version: "myversion" });
       expect(octokit.actions.createWorkflowDispatch).toHaveBeenCalledOnceWith({
         owner, repo, workflow_id: "myworkflowid", ref: "myref", inputs: { version: "myversion" }
+      });
+    });
+  });
+
+  describe("createRelease", () => {
+    it("creates a release", async () => {
+      octokit.repos.createRelease.and.returnValue(Promise.resolve({}));
+      await githubFacade.createRelease({
+        tag_name: "mytagname",
+        name: "myname",
+        body: "mybody",
+        prerelease: true
+      });
+      expect(octokit.repos.createRelease({
+        owner, repo, tag_name: "mytagname", name: "myname", body: "mybody", prerelease: true
+      }));
+    });
+    it("returns the upload_url", async () => {
+      octokit.repos.createRelease.and.returnValue({ upload_url: "myuploadurl" });
+      const uploadUrl = await githubFacade.createRelease({});
+      expect(uploadUrl).toEqual("myuploadurl");
+    });
+  });
+
+  describe("uploadReleaseAsset", () => {
+    it("uploads the release asset", async () => {
+      fs.stat.and.returnValue(Promise.resolve({ size: 42 }));
+      fs.readFile.and.returnValue(Promise.resolve("myfilecontents"));
+      await githubFacade.uploadReleaseAsset("myurl", "./myartifact/myfile.js");
+      expect(octokit.repos.uploadReleaseAsset).toHaveBeenCalledOnceWith({
+        url: "myurl",
+        headers: {
+          "content-type": "application/javascript",
+          "content-length": 42
+        },
+        name: "myfile.js",
+        file: "myfilecontents"
       });
     });
   });

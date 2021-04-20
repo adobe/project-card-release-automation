@@ -2,15 +2,26 @@ const injectRecordRelease = require("../lib/injectRecordRelease");
 
 describe("recordRelease", () => {
   let githubFacade;
+  let artifactClient;
   let version;
 
   beforeEach(() => {
-    githubFacade = jasmine.createSpyObj("githubFacade", ["findIssueNumberByIssueTitle", "createIssueComment", "closeIssue"]);
+    githubFacade = jasmine.createSpyObj("githubFacade", [
+      "findIssueNumberByIssueTitle",
+      "createIssueComment",
+      "closeIssue",
+      "createRelease",
+      "uploadReleaseAsset"
+    ]);
+    artifactClient = jasmine.createSpyObj("artifactClient", [
+      "downloadAllArtifacts"
+    ]);
+    artifactClient.downloadAllArtifacts.and.returnValue(Promise.resolve([]));
   });
 
   const run = async () => {
     const recordRelease = injectRecordRelease({
-      githubFacade, version
+      githubFacade, version, artifactClient
     });
     await recordRelease();
   };
@@ -47,4 +58,44 @@ describe("recordRelease", () => {
     await run();
     expect(githubFacade.closeIssue).not.toHaveBeenCalled();
   });
+
+  it("creates a final release", async () => {
+    version = "1.2.3";
+    await run();
+    expect(githubFacade.createRelease).toHaveBeenCalledOnceWith({
+      tag_name: "v1.2.3",
+      name: "1.2.3",
+      body: "1.2.3",
+      prerelease: false
+    });
+  });
+
+  it("creates a prerelease", async () => {
+    version = "1.2.3-beta.3";
+    await run();
+    expect(githubFacade.createRelease).toHaveBeenCalledOnceWith({
+      tag_name: "v1.2.3-beta.3",
+      name: "1.2.3-beta.3",
+      body: "1.2.3-beta.3",
+      prerelease: true
+    });
+  });
+
+  it("uploads artifacts", async () => {
+    version = "1.2.3";
+    githubFacade.createRelease.and.returnValue(Promise.resolve("myuploadurl"));
+    artifactClient.downloadAllArtifacts.and.returnValue(Promise.resolve([
+      { downloadPath: "./myartifact1/index.js" },
+      { downloadPath: "./myartifact2/index.zip" }
+    ]));
+    await run();
+    expect(githubFacade.uploadReleaseAsset).toHaveBeenCalledWith(
+      "myuploadurl", "./myartifact1/index.js"
+    );
+    expect(githubFacade.uploadReleaseAsset).toHaveBeenCalledWith(
+      "myuploadurl", "./myartifact2/index.zip"
+    );
+
+  })
+
 });

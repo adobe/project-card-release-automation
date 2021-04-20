@@ -25,12 +25,13 @@
   },
   "homepage": "https://github.com/jonsnyder/project-card-release-automation#readme",
   "dependencies": {
+    "@actions/artifact": "^0.5.1",
     "@actions/core": "^1.2.5",
     "@actions/github": "^4.0.0",
+    "mime-types": "^2.1.30",
     "semver": "^7.3.5"
   },
   "devDependencies": {
-    "@octokit/rest": "^18.5.0",
     "@vercel/ncc": "^0.27.0",
     "eslint": "^7.4.0",
     "glob": "^7.1.6",
