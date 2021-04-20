@@ -422,8 +422,9 @@ module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => as
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const semver = __nccwpck_require__(1383);
+const path = __nccwpck_require__(5622);
 
-module.exports = ({ githubFacade, version, artifactClient, core }) => async () => {
+module.exports = ({ githubFacade, version, artifactClient, core, fs }) => async () => {
 
   const issueTitle = semver.coerce(version).raw;
   const issueNumber = await githubFacade.findIssueNumberByIssueTitle(issueTitle);
@@ -443,9 +444,16 @@ module.exports = ({ githubFacade, version, artifactClient, core }) => async () =
   const downloadResponse = await artifactClient.downloadAllArtifacts();
   core.info("Downloaded artifacts");
   core.info(JSON.stringify(downloadResponse, null, 2));
-  downloadResponse.forEach(response => {
-    githubFacade.uploadReleaseAsset(uploadUrl, response.downloadPath);
-  });
+  for (const response of downloadResponse) {
+    const files = await fs.readdir(response.downloadPath);
+    for (const filename of files) {
+      core.info(path.join(response.downloadPath, filename));
+      githubFacade.uploadReleaseAsset(
+        uploadUrl,
+        path.join(response.downloadPath, filename)
+      );
+    }
+  }
 }
 
 /***/ }),

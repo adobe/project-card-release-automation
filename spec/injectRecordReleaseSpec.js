@@ -4,6 +4,8 @@ describe("recordRelease", () => {
   let githubFacade;
   let artifactClient;
   let version;
+  let fs;
+  let core;
 
   beforeEach(() => {
     githubFacade = jasmine.createSpyObj("githubFacade", [
@@ -17,11 +19,13 @@ describe("recordRelease", () => {
       "downloadAllArtifacts"
     ]);
     artifactClient.downloadAllArtifacts.and.returnValue(Promise.resolve([]));
+    fs = jasmine.createSpyObj("fs", ["readdir"]);
+    core = jasmine.createSpyObj("core", ["info"]);
   });
 
   const run = async () => {
     const recordRelease = injectRecordRelease({
-      githubFacade, version, artifactClient
+      githubFacade, version, artifactClient, core, fs
     });
     await recordRelease();
   };
@@ -85,15 +89,19 @@ describe("recordRelease", () => {
     version = "1.2.3";
     githubFacade.createRelease.and.returnValue(Promise.resolve("myuploadurl"));
     artifactClient.downloadAllArtifacts.and.returnValue(Promise.resolve([
-      { downloadPath: "./myartifact1/index.js" },
-      { downloadPath: "./myartifact2/index.zip" }
+      { downloadPath: "/my/path/myartifact1" },
+      { downloadPath: "/my/path/myartifact2" }
     ]));
+    fs.readdir.and.returnValues(
+      Promise.resolve(["index.js"]),
+      Promise.resolve(["index.zip"])
+    );
     await run();
     expect(githubFacade.uploadReleaseAsset).toHaveBeenCalledWith(
-      "myuploadurl", "./myartifact1/index.js"
+      "myuploadurl", "/my/path/myartifact1/index.js"
     );
     expect(githubFacade.uploadReleaseAsset).toHaveBeenCalledWith(
-      "myuploadurl", "./myartifact2/index.zip"
+      "myuploadurl", "/my/path/myartifact2/index.zip"
     );
 
   })
