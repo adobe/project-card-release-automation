@@ -414,7 +414,7 @@ module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => as
 
 const semver = __nccwpck_require__(1383);
 
-module.exports = ({ githubFacade, version, artifactClient }) => async () => {
+module.exports = ({ githubFacade, version, artifactClient, core }) => async () => {
 
   const issueTitle = semver.coerce(version).raw;
   const issueNumber = await githubFacade.findIssueNumberByIssueTitle(issueTitle);
@@ -432,6 +432,8 @@ module.exports = ({ githubFacade, version, artifactClient }) => async () => {
     prerelease
   });
   const downloadResponse = await artifactClient.downloadAllArtifacts();
+  core.info("Downloaded artifacts");
+  core.info(JSON.stringify(downloadResponse, null, 2));
   downloadResponse.forEach(response => {
     githubFacade.uploadReleaseAsset(uploadUrl, response.downloadPath);
   });
