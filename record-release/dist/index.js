@@ -286,7 +286,7 @@ module.exports = ({ octokit, owner, repo, fs, core }) => {
         "content-type": mime.lookup(filename) || "application/octet-stream",
         "content-length": (await fs.stat(filename)).size
       };
-      const file = await fs.readFile(filename);
+      const data = await fs.readFile(filename);
 
       /*core.info(JSON.stringify({
         url,
@@ -299,7 +299,7 @@ module.exports = ({ octokit, owner, repo, fs, core }) => {
         url,
         headers,
         name: path.basename(filename),
-        file
+        data
       });
     }
 
