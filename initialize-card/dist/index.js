@@ -176,8 +176,9 @@ module.exports = memoizeGetters({
 const assert = __nccwpck_require__(5957);
 const mime = __nccwpck_require__(3583);
 const path = __nccwpck_require__(5622);
+const { coerce } = __nccwpck_require__(1383);
 
-module.exports = ({ octokit, owner, repo, fs }) => {
+module.exports = ({ octokit, owner, repo, fs, core }) => {
   return {
     /**
      * @param {string} branch
@@ -240,8 +241,8 @@ module.exports = ({ octokit, owner, repo, fs }) => {
       });
       // The content is base 64 encoded.
       const packageJson = Buffer.from(content, encoding).toString();
-      const package = JSON.parse(packageJson);
-      return package.version;
+      const packageObj = JSON.parse(packageJson);
+      return packageObj.version;
     },
     async dispatchWorkflow(workflow_id, ref, inputs) {
       await octokit.actions.createWorkflowDispatch({
@@ -289,16 +290,25 @@ module.exports = ({ octokit, owner, repo, fs }) => {
       });
       return upload_url;
     },
-    async uploadReleaseAsset(url, file) {
+    async uploadReleaseAsset(url, filename) {
       const headers = {
-        "content-type": mime.lookup(file) || "application/octet-stream",
-        "content-length": (await fs.stat(file)).size
+        "content-type": mime.lookup(filename) || "application/octet-stream",
+        "content-length": (await fs.stat(filename)).size
       };
+      const file = await fs.readFile(filename);
+
+      core.info(JSON.stringify({
+        url,
+        headers,
+        name: path.basename(filename),
+        file
+      }, null, 2));
+
       await octokit.repos.uploadReleaseAsset({
         url,
         headers,
-        name: path.basename(file),
-        file: await fs.readFile(file)
+        name: path.basename(filename),
+        file
       });
     }
 
