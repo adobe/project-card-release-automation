@@ -280,7 +280,7 @@ module.exports = ({ octokit, owner, repo, fs, core }) => {
       });
     },
     async createRelease({ tag_name, name, body, prerelease }) {
-      const releaseResponse = await octokit.repos.createRelease({
+      const { data: { upload_url } } = await octokit.repos.createRelease({
         owner,
         repo,
         tag_name,
@@ -288,8 +288,7 @@ module.exports = ({ octokit, owner, repo, fs, core }) => {
         body,
         prerelease
       });
-      core.info(JSON.stringify(releaseResponse, null, 2));
-      return releaseResponse.upload_url;
+      return upload_url;
     },
     async uploadReleaseAsset(url, filename) {
       const headers = {
