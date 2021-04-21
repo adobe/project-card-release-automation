@@ -191,13 +191,13 @@ module.exports = ({ octokit, owner, repo, fs }) => {
     getByUrl(url) {
       return octokit.request(`GET ${url}`);
     },
-    async createIssue({ title, body, label }) {
+    async createIssue({ title, body, labels }) {
       const { data: { id } } = await octokit.issues.create({
         owner,
         repo,
         title,
         body,
-        labels: [label]
+        labels
       });
       return id;
     },
@@ -396,7 +396,7 @@ module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => as
   const issueId = await githubFacade.createIssue({
     title: newVersion,
     body: `Track progress of release ${newVersion}.`,
-    label: ["release",`branch:${branch}`]
+    labels: ["release",`branch:${branch}`]
   });
   core.info(`Created issue with id: ${issueId}`);
   const projectId = await githubFacade.fetchProjectId(projectNumber);

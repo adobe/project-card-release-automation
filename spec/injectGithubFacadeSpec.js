@@ -61,14 +61,14 @@ describe("githubFacade", () => {
   describe("createIssue", () => {
     it("calls octokit with the correct parameters", async () => {
       octokit.issues.create.and.returnValue(Promise.resolve({ data: { id: "myid" } }));
-      await githubFacade.createIssue({ title: "mytitle", body: "mybody", label: "mylabel" });
+      await githubFacade.createIssue({ title: "mytitle", body: "mybody", labels: ["mylabel"] });
       expect(octokit.issues.create).toHaveBeenCalledOnceWith({
         owner, repo, title: "mytitle", body: "mybody", labels: ["mylabel"]
       });
     });
     it("returns the new id", async () => {
       octokit.issues.create.and.returnValue(Promise.resolve({ data: { id: "myid" } }));
-      expect(await githubFacade.createIssue({ title: "mytitle", body: "mybody", label: "mylabel" }))
+      expect(await githubFacade.createIssue({ title: "mytitle", body: "mybody", labels: "mylabel" }))
         .toEqual("myid");
     });
   });
