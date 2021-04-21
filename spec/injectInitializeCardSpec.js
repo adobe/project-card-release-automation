@@ -62,7 +62,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "2.0.0",
       body: jasmine.anything(),
-      label: ["release","branch:mybranch"]
+      labels: ["release","branch:mybranch"]
     });
   });
 
@@ -73,7 +73,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.3.0",
       body: jasmine.anything(),
-      label: ["release","branch:mybranch"]
+      labels: ["release","branch:mybranch"]
     });
   });
 
@@ -84,7 +84,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.2.4",
       body: jasmine.anything(),
-      label: ["release","branch:mybranch"]
+      labels: ["release","branch:mybranch"]
     });
   });
 
