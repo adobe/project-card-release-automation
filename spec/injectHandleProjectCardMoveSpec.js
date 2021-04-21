@@ -1,4 +1,5 @@
 const injectHandleProjectCardMove = require("../lib/injectHandleProjectCardMove");
+const expectError = require("./helpers/expectError");
 const expectSoftError = require("./helpers/expectSoftError");
 
 describe("handleProjectCardMove", () => {
@@ -26,8 +27,9 @@ describe("handleProjectCardMove", () => {
       projectNumber
     });
     projectResponse = { data: { number: 42 } };
-    contentResponse = { data: { title: "1.2.3" } };
+    contentResponse = { data: { title: "1.2.3", labels: [{ name: "branch:main" }] } };
     columnResponse = { data: { name: "Alpha" } };
+
     githubFacade.getByUrl.and.callFake(url => {
       if (url === projectUrl) {
         return Promise.resolve(projectResponse);
@@ -39,9 +41,8 @@ describe("handleProjectCardMove", () => {
         return Promise.resolve(columnResponse);
       }
     });
+    githubFacade.hasBranch.and.returnValue(true);
   });
-
-
 
   it("verifies the project number matches", async () => {
     projectResponse = { data: { number: 1 } };
@@ -53,7 +54,7 @@ describe("handleProjectCardMove", () => {
 
   it("verifies the issue on the project card is a semantic version", async () => {
     contentResponse = { data: { title: "foo.bar" } };
-    await expectSoftError(
+    await expectError(
       () => handleProjectCardMove(),
       "Issue name in project card is not a semantic version: foo.bar"
     );
@@ -61,7 +62,7 @@ describe("handleProjectCardMove", () => {
 
   it("verifies the issue in the project card doesn't have a prerelease suffix", async () => {
     contentResponse = { data: { title: "1.2.3-alpha.0" } };
-    await expectSoftError(
+    await expectError(
       () => handleProjectCardMove(),
       "Issue name in project card should not have prerelease version: 1.2.3-alpha.0"
     );
@@ -87,22 +88,34 @@ describe("handleProjectCardMove", () => {
     expect(version).toEqual("1.2.3-beta.0");
   });
 
-  it("uses the v1 branch", async () => {
-    githubFacade.hasBranch.and.callFake(branchName => Promise.resolve(branchName === "v1"));
+  it("uses the branch from the label", async () => {
+    contentResponse = { data: { title: "1.2.3", labels: [
+      { name: "release" },{ name: "branch:mybranch" }
+    ]} };
     const { ref } = await handleProjectCardMove();
-    expect(ref).toEqual("refs/heads/v1");
+    expect(ref).toEqual("refs/heads/mybranch");
   });
 
-  it("uses the v1.2 branch when v1 and v1.2 are defined", async () => {
-    githubFacade.hasBranch.and.returnValue(Promise.resolve(true))
-    const { ref } = await handleProjectCardMove();
-    expect(ref).toEqual("refs/heads/v1.2");
-  });
+  it("throws an error when there is no branch label", async () => {
+    contentResponse = { data: { title: "1.2.3", labels: [{ name: "release" }] } };
+    await expectError(
+      async () => handleProjectCardMove(),
+      "Could not find label with branch name"
+    );
+  })
+
+  it("throws an error when the branch doesn't exist", async () => {
+    githubFacade.hasBranch.and.returnValue(false);
+    await expectError(
+      async () => handleProjectCardMove(),
+      "Could not find branch named: main"
+    );
+  })
 
   it("throws an error when the column name has a space in it.", async () => {
     columnResponse = { data: { name: "My Column" } };
     await expectSoftError(
-      () => handleProjectCardMove(),
+      async () => handleProjectCardMove(),
       "Invalid prerelease version: 1.2.3-my column.0"
     );
   });

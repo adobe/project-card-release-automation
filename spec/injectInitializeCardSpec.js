@@ -12,7 +12,7 @@ describe("initializeCard", () => {
 
   beforeEach(() => {
     packageVersion = "1.2.3";
-    ref = "myref";
+    ref = "refs/heads/mybranch";
     githubFacade = jasmine.createSpyObj("githubFacade", [
       "createIssue",
       "fetchProjectId",
@@ -62,7 +62,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "2.0.0",
       body: jasmine.anything(),
-      label: "release"
+      label: ["release","branch:mybranch"]
     });
   });
 
@@ -73,7 +73,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.3.0",
       body: jasmine.anything(),
-      label: "release"
+      label: ["release","branch:mybranch"]
     });
   });
 
@@ -84,7 +84,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.2.4",
       body: jasmine.anything(),
-      label: "release"
+      label: ["release","branch:mybranch"]
     });
   });
 
@@ -99,13 +99,13 @@ describe("initializeCard", () => {
     releaseType = "major";
     build();
     await initializeCard();
-    expect(core.info).toHaveBeenCalledOnceWith("Created release card: 2.0.0");
+    expect(core.info).toHaveBeenCalledWith("Created card: 2.0.0");
   });
 
   it("gets the package version with the correct ref", async () => {
     releaseType = "major";
     build();
     await initializeCard();
-    expect(githubFacade.getPackageVersion).toHaveBeenCalledOnceWith("myref");
+    expect(githubFacade.getPackageVersion).toHaveBeenCalledOnceWith("refs/heads/mybranch");
   })
 });

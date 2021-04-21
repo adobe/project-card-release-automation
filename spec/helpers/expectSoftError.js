@@ -1,5 +1,5 @@
 const expectError = require("./expectError");
 
-module.exports = (func, message) => {
-  expectError(func, message, false);
+module.exports = async (func, message) => {
+  await expectError(func, message, false);
 }
