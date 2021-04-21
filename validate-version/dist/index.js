@@ -167,9 +167,8 @@ module.exports = memoizeGetters({
 const assert = __nccwpck_require__(5957);
 const mime = __nccwpck_require__(3583);
 const path = __nccwpck_require__(5622);
-const { coerce } = __nccwpck_require__(1383);
 
-module.exports = ({ octokit, owner, repo, fs, core }) => {
+module.exports = ({ octokit, owner, repo, fs }) => {
   return {
     /**
      * @param {string} branch
@@ -284,16 +283,9 @@ module.exports = ({ octokit, owner, repo, fs, core }) => {
     async uploadReleaseAsset(url, filename) {
       const headers = {
         "content-type": mime.lookup(filename) || "application/octet-stream",
-        "content-length": (await fs.stat(filename)).size
+        "content-length": (await fs.lstat(filename)).size
       };
       const data = await fs.readFile(filename);
-
-      /*core.info(JSON.stringify({
-        url,
-        headers,
-        name: path.basename(filename),
-        file
-      }, null, 2));*/
 
       await octokit.repos.uploadReleaseAsset({
         url,
@@ -429,10 +421,12 @@ module.exports = ({ githubFacade, version, artifactClient, core, fs }) => async 
 
   const issueTitle = semver.coerce(version).raw;
   const issueNumber = await githubFacade.findIssueNumberByIssueTitle(issueTitle);
+  core.info("Creating release comment");
   await githubFacade.createIssueComment(issueNumber, `Released ${version}`);
 
   const prerelease = semver.prerelease(version) !== null;
   if (!prerelease) {
+    core.info("Closing issue");
     await githubFacade.closeIssue(issueNumber);
   }
 
@@ -443,16 +437,13 @@ module.exports = ({ githubFacade, version, artifactClient, core, fs }) => async 
     prerelease
   });
   const downloadResponse = await artifactClient.downloadAllArtifacts();
-  core.info("Downloaded artifacts");
-  core.info(JSON.stringify(downloadResponse, null, 2));
+
   for (const response of downloadResponse) {
     const files = await fs.readdir(response.downloadPath);
     for (const filename of files) {
-      core.info(path.join(response.downloadPath, filename));
-      githubFacade.uploadReleaseAsset(
-        uploadUrl,
-        path.join(response.downloadPath, filename)
-      );
+      const fullPath = path.join(response.downloadPath, filename);
+      core.info(`Uploading ${fullPath} to release.`);
+      githubFacade.uploadReleaseAsset(uploadUrl, fullPath);
     }
   }
 }

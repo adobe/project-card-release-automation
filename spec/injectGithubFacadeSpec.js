@@ -17,7 +17,7 @@ describe("githubFacade", () => {
       repos: jasmine.createSpyObj("octokit.repos", ["getContent", "createRelease", "uploadReleaseAsset"]),
       actions: jasmine.createSpyObj("octokit.actions", ["createWorkflowDispatch"])
     };
-    fs = jasmine.createSpyObj("fs", ["stat", "readFile"]);
+    fs = jasmine.createSpyObj("fs", ["lstat", "readFile"]);
     githubFacade = createGithubFacade({ octokit, owner, repo, fs });
   });
 
@@ -217,7 +217,7 @@ describe("githubFacade", () => {
 
   describe("createRelease", () => {
     it("creates a release", async () => {
-      octokit.repos.createRelease.and.returnValue(Promise.resolve({}));
+      octokit.repos.createRelease.and.returnValue(Promise.resolve({ data: {} }));
       await githubFacade.createRelease({
         tag_name: "mytagname",
         name: "myname",
@@ -229,7 +229,7 @@ describe("githubFacade", () => {
       }));
     });
     it("returns the upload_url", async () => {
-      octokit.repos.createRelease.and.returnValue({ upload_url: "myuploadurl" });
+      octokit.repos.createRelease.and.returnValue({ data: { upload_url: "myuploadurl" } });
       const uploadUrl = await githubFacade.createRelease({});
       expect(uploadUrl).toEqual("myuploadurl");
     });
@@ -237,7 +237,7 @@ describe("githubFacade", () => {
 
   describe("uploadReleaseAsset", () => {
     it("uploads the release asset", async () => {
-      fs.stat.and.returnValue(Promise.resolve({ size: 42 }));
+      fs.lstat.and.returnValue(Promise.resolve({ size: 42 }));
       fs.readFile.and.returnValue(Promise.resolve("myfilecontents"));
       await githubFacade.uploadReleaseAsset("myurl", "./myartifact/myfile.js");
       expect(octokit.repos.uploadReleaseAsset).toHaveBeenCalledOnceWith({
@@ -247,7 +247,7 @@ describe("githubFacade", () => {
           "content-length": 42
         },
         name: "myfile.js",
-        file: "myfilecontents"
+        data: "myfilecontents"
       });
     });
   });
