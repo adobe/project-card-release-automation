@@ -304,6 +304,7 @@ module.exports = ({ octokit, owner, repo, fs }) => {
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const semver = __nccwpck_require__(1383);
+const assert = __nccwpck_require__(5957);
 const softAssert = __nccwpck_require__(3304);
 
 module.exports = ({
@@ -311,29 +312,19 @@ module.exports = ({
   projectUrl,
   contentUrl,
   columnUrl,
-  ref: contextRef,
   projectNumber }) => async () => {
-
-  const findVersionBranch = async version => {
-    const versionParts = version.split(".");
-    const patchBranch = `v${versionParts[0]}.${versionParts[1]}`;
-    const minorBranch = `v${versionParts[0]}`;
-
-    if (await githubFacade.hasBranch(patchBranch)) {
-      return `refs/heads/${patchBranch}`;
-    }
-    if (await githubFacade.hasBranch(minorBranch)) {
-      return `refs/heads/${minorBranch}`;
-    }
-    return contextRef;
-  };
 
   const { data: { number: contextProjectNumber } } = await githubFacade.getByUrl(projectUrl);
   softAssert(contextProjectNumber === projectNumber, "Card moved on non-release project.");
 
-  const { data: { title: issueTitle } } = await githubFacade.getByUrl(contentUrl);
-  softAssert(semver.valid(issueTitle), `Issue name in project card is not a semantic version: ${issueTitle}`);
-  softAssert(semver.prerelease(issueTitle) === null, `Issue name in project card should not have prerelease version: ${issueTitle}`);
+  const { data: { title: issueTitle, labels } } = await githubFacade.getByUrl(contentUrl);
+  assert(semver.valid(issueTitle), `Issue name in project card is not a semantic version: ${issueTitle}`);
+  assert(semver.prerelease(issueTitle) === null, `Issue name in project card should not have prerelease version: ${issueTitle}`);
+  const branchLabel = labels.map(({ name }) => name).find(label => label.startsWith("branch:"))
+  assert(branchLabel !== undefined, "Could not find label with branch name");
+  const branchName = branchLabel.substring(7);
+  assert(githubFacade.hasBranch(branchName), `Could not find branch named: ${branchName}`);
+  const ref = `refs/heads/${branchName}`;
 
   const { data: { name: columnName } } = await githubFacade.getByUrl(columnUrl);
   softAssert(columnName !== "New", "Nothing to do when card moved to \"New\"");
@@ -345,8 +336,6 @@ module.exports = ({
   }
 
   softAssert(semver.valid(newVersion), `Invalid prerelease version: ${newVersion}`);
-
-  const ref = await findVersionBranch(issueTitle);
 
   return { ref, inputs: { version: newVersion } };
 }
@@ -385,6 +374,12 @@ const semver = __nccwpck_require__(1383);
 module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => async () => {
 
   assert(
+    ref.startsWith("refs/heads/"),
+    `ref must be a branch, got ${ref}`
+  );
+  const branch = ref.substring(11);
+
+  assert(
     releaseType === "major" || releaseType === "minor" || releaseType === "patch",
     "`releaseType` must be major, minor, or patch."
   );
@@ -401,12 +396,13 @@ module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => as
   const issueId = await githubFacade.createIssue({
     title: newVersion,
     body: `Track progress of release ${newVersion}.`,
-    label: "release"
+    label: ["release",`branch:${branch}`]
   });
+  core.info(`Created issue with id: ${issueId}`);
   const projectId = await githubFacade.fetchProjectId(projectNumber);
   const columnId = await githubFacade.fetchColumnIdByName(projectId, "New");
   await githubFacade.createIssueCard(columnId, issueId);
-  core.info(`Created release card: ${newVersion}`);
+  core.info(`Created card: ${newVersion}`);
 };
 
 /***/ }),
