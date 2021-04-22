@@ -97,7 +97,7 @@ jobs:
     name: "Trigger Release If Needed"
     runs-on: ubuntu-latest
     steps:
-      - uses: jonsnyder/project-card-release-automation/trigger-release@main
+      - uses: jonsnyder/project-card-release-automation/trigger-release@v1
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           workflowId: "deployRelease.yml"
