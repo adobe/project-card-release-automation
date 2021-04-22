@@ -1,20 +1,112 @@
-# Create a JavaScript Action
+# Project Card Release Automation
 
 <p align="center">
   <a href="https://github.com/actions/javascript-action/actions"><img alt="javscript-action status" src="https://github.com/actions/javascript-action/workflows/units-test/badge.svg"></a>
 </p>
 
-Use this template to bootstrap the creation of a JavaScript action.:rocket:
+This repo contains a set of Github actions that can be used to automate release processes using semantic versioning of projects with a versioned package.json. The actions work off of a Github issue created for each release version, a card put into a Github project, and finally a Github release record.
 
-This template includes tests, linting, a validation workflow, publishing, and versioning guidance.
+## General overview
 
-If you are new, there's also a simpler introduction.  See the [Hello World JavaScript Action](https://github.com/actions/hello-world-javascript-action)
+To use these actions in your repo follow these setup steps:
+1. Create a Github project with columns "New", "Alpha", "Beta", and "Release"
+2. Create workflows for initializing a release, triggering a release, and deploying a release. These are detailed more below.
 
-## Create an action from this template
+Once implemented in your repo, the general release process would look like this:
+1. Decide on what kind of release you want to do (major, minor, or patch), and which branch you would like to work off of.
+1. Manually run a workflow to initialize a release issue and project card with the target version. The new card should appear in the "New" column of the Github project. The new issue will have a title corresponding to the desired release number (i.e. "1.2.0")
+1. Move the card to the "Alpha" column. This will trigger a prerelease version build (i.e. "1.2.0-alpha.0")
+1. Now new commits or PR merges to the branch will trigger a new prerelease build (i.e. "1.2.0-alpha.1")
+1. When all the features for the targeted release are complete, move the project card to the "Beta" column. This will trigger a beta build (i.e. "1.2.0-beta.0")
+1. New commits or PR merges to the branch will trigger a new beta build (i.e. "1.2.0-beta.1")
+1. when you are satisfied with the release, move the project card to "Release". This triggers a release build (i.e. "1.2.0")
+1. Start the process again for the next release.
 
-Click the `Use this Template` and provide the new repo details for your action
+## Setting up the Github workflows
 
-## Code in Main
+First create the workflow you will use to create the issue and release card. Be sure to replace the projectNumber.
+
+```yaml
+name: Initialize Intended Release
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        description: "Release Type [major|minor|patch]"
+        required: true
+
+jobs:
+  initializeIntendedRelease:
+    name: "Initialize Intended Release"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jonsnyder/project-card-release-automation/initialize-card@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          releaseType: ${{ github.event.inputs.type }}
+          projectNumber: 1
+```
+
+Next create the workflow to run the release process:
+
+```yaml
+name: Deploy Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version"
+        required: true
+
+jobs:
+  release:
+    name: "Release"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jonsnyder/project-card-release-automation/validate-version@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ github.event.inputs.version }}
+      - uses: actions/checkout@v2
+      - run: |
+          git config user.name $GITHUB_ACTOR
+          git config user.email gh-actions-${GITHUB_ACTOR}@github.com
+          git remote add gh-origin https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git/
+          npm version ${{ github.event.inputs.version }}
+          git push gh-origin HEAD:${GITHUB_REF} --follow-tags
+      - uses: jonsnyder/project-card-release-automation/record-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ github.event.inputs.version }}
+```
+
+The run step in the workflow code above simply increments the version in package.json, and commits the change. This is where you would put the logic to preform the release process for your repo.
+
+Next create the workflow to trigger releases:
+
+```yaml
+name: Trigger Release
+on:
+  project_card:
+    types: [moved]
+  push:
+    branch:
+      - "**"
+jobs:
+  triggerReleaseIfNeeded:
+    name: "Trigger Release If Needed"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jonsnyder/project-card-release-automation/trigger-release@main
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          workflowId: "deployRelease.yml"
+          projectNumber: 1
+```
+
+You can change the branch section to only trigger based on the branches that you will use for releases. Be sure to change the workflowId to be the name of the deploy release YAML file, and change the projectNumber as before.
+
+## Development
 
 Install the dependencies
 
@@ -22,95 +114,14 @@ Install the dependencies
 npm install
 ```
 
-Run the tests :heavy_check_mark:
+Run the tests:
 
 ```bash
-$ npm test
-
- PASS  ./index.test.js
-  ✓ throws invalid number (3ms)
-  ✓ wait 500 ms (504ms)
-  ✓ test runs (95ms)
-...
+npm test
 ```
 
-## Change action.yml
-
-The action.yml defines the inputs and output for your action.
-
-Update the action.yml with your name, description, inputs and outputs for your action.
-
-See the [documentation](https://help.github.com/en/articles/metadata-syntax-for-github-actions)
-
-## Change the Code
-
-Most toolkit and CI/CD operations involve async operations so the action is run in an async function.
-
-```javascript
-const core = require('@actions/core');
-...
-
-async function run() {
-  try {
-      ...
-  }
-  catch (error) {
-    core.setFailed(error.message);
-  }
-}
-
-run()
-```
-
-See the [toolkit documentation](https://github.com/actions/toolkit/blob/master/README.md#packages) for the various packages.
-
-## Package for distribution
-
-GitHub Actions will run the entry point from the action.yml. Packaging assembles the code into one file that can be checked in to Git, enabling fast and reliable execution and preventing the need to check in node_modules.
-
-Actions are run from GitHub repos.  Packaging the action will create a packaged action in the dist folder.
-
-Run prepare
+Build the combined javascript files with ncc:
 
 ```bash
 npm run prepare
 ```
-
-Since the packaged index.js is run from the dist folder.
-
-```bash
-git add dist
-```
-
-## Create a release branch
-
-Users shouldn't consume the action from master since that would be latest code and actions can break compatibility between major versions.
-
-Checkin to the v1 release branch
-
-```bash
-git checkout -b v1
-git commit -a -m "v1 release"
-```
-
-```bash
-git push origin v1
-```
-
-Note: We recommend using the `--license` option for ncc, which will create a license file for all of the production node modules used in your project.
-
-Your action is now published! :rocket:
-
-See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
-
-## Usage
-
-You can now consume the action by referencing the v1 branch
-
-```yaml
-uses: actions/javascript-action@v1
-with:
-  milliseconds: 1000
-```
-
-See the [actions tab](https://github.com/actions/javascript-action/actions) for runs of this action! :rocket:
