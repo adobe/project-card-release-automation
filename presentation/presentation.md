@@ -16,7 +16,10 @@
 ### Problem
 It's easy enough using Github actions to trigger a build and release when a PR is merged, but what version number should be used?
 
-This is a decision that is answered manually by the development team. For example, the development team decides that the next release will be a minor release. They decide when to start releasing "alpha" versions, when to start releasing "beta" versions, and when to push the release without prerelease qualifiers.
+These are a decision that are answered manually by the development team.
+* Is the next release major, minor, or patch?
+* When to start releasing "alpha" and "beta" versions?
+* When to push the final release?
 
 ### Solution
 Github has a good deal of project management functionality. Project Boards can keep track of each release version as it progresses from "alpha", to "beta", and then to the final release.
@@ -33,9 +36,14 @@ Github has a good deal of project management functionality. Project Boards can k
 * Approve release
 * [Review documentation](../README.md)
 
+### Customizations
+* Customize release code
+* Supports different branching strategies
+* "Alpha" and "Beta" columns can be customized (i.e. "RC")
+
 ### Roadmap
 
-1. Work with the Open Source team to publish this repo to the Adobe org.
-1. Automatically extract release notes from Pull Request descriptions.
-1. Allow this to be used for more than just repos with package.json.
-1. Add workflows to this repo to automate deployment.
+* Work with the Open Source team to publish this repo to the Adobe org.
+* Automatically extract release notes from Pull Request descriptions.
+* Allow this to be used for more than just repos with package.json.
+* Add workflows to this repo to automate deployment.
