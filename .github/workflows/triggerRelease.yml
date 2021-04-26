@@ -10,7 +10,8 @@ jobs:
     name: "Trigger Release If Needed"
     runs-on: ubuntu-latest
     steps:
-      - uses: jonsnyder/project-card-release-automation/trigger-release@v1
+      - uses: actions/checkout@v2
+      - uses: ./trigger-release
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           workflowId: "deployRelease.yml"
