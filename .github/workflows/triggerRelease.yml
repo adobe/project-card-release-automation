@@ -1,0 +1,17 @@
+name: Trigger Release
+on:
+  project_card:
+    types: [moved]
+  push:
+    branch:
+      - "main"
+jobs:
+  triggerReleaseIfNeeded:
+    name: "Trigger Release If Needed"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jonsnyder/project-card-release-automation/trigger-release@v1
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          workflowId: "deployRelease.yml"
+          projectNumber: 1
