@@ -5,9 +5,8 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint .",
-    "prepare": "./build.sh",
-    "test": "jasmine",
-    "all": "npm run lint && npm run prepare && npm run test"
+    "build": "./build.sh",
+    "test": "jasmine"
   },
   "repository": {
     "type": "git",
