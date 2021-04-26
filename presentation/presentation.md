@@ -37,9 +37,11 @@ Github has a good deal of project management functionality. Project Boards can k
 * [Review documentation](../README.md)
 
 ### Customizations
-* Customize release code
-* Supports different branching strategies
-* "Alpha" and "Beta" columns can be customized (i.e. "RC")
+* Release code
+* Approvals
+* Bot user
+* Branching strategies
+* "Alpha" and "Beta" columns (i.e. "RC")
 
 ### Roadmap
 
