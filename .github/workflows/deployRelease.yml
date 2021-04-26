@@ -31,7 +31,7 @@ jobs:
           # push to major release branch
           if [[ "${{ github.event.inputs.version }}" != *"-"* ]]; then
             BRANCH=`echo "v${{ github.event.inputs.version }}" | cut -d. -f1`
-            git fetch gh-origin $BRANCH
+            git fetch gh-origin
             git checkout $BRANCH
             git merge gh-origin/main
             git push gh-origin $BRANCH
