@@ -9,17 +9,3 @@ the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTA
 OF ANY KIND, either express or implied. See the License for the specific language
 governing permissions and limitations under the License.
 */
-
-module.exports = async (func, message, nonZeroExitCode = true) => {
-  try {
-    await func();
-    fail(`Expected "${message}", but no error was thrown`);
-  } catch (e) {
-    expect(e.message).toEqual(message);
-    if (nonZeroExitCode) {
-      expect(e.exitCode).not.toEqual(0);
-    } else {
-      expect(e.exitCode).toEqual(0);
-    }
-  }
-}

@@ -1,1 +1,4 @@
-dist/
+initialize-card/
+record-release/
+trigger-release/
+validate-version/

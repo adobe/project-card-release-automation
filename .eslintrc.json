@@ -13,6 +13,13 @@
     "parserOptions": {
         "ecmaVersion": 2018
     },
+    "plugins": [
+        "license-header"
+    ],
     "rules": {
+        "license-header/header": [
+            "error",
+            "./license-header.js"
+        ]
     }
 }
