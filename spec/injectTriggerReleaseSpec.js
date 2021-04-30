@@ -20,6 +20,7 @@ describe("triggerRelease", () => {
   let workflowId;
   let eventName;
   let githubFacade;
+  let triggerRelease;
 
   beforeEach(() => {
     handleProjectCardMove = jasmine.createSpy("handleProjectCardMove");
