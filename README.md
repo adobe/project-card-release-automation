@@ -123,7 +123,7 @@ npm test
 Build the combined javascript files with ncc:
 
 ```bash
-npm run prepare
+npm run build
 ```
 
 ## Contributing
