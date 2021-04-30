@@ -208,9 +208,9 @@ describe("githubFacade", () => {
 `;
     const encoding = "base64"
     it("gets the package version", async () => {
-      octokit.repos.getContent.and.returnValue({
+      octokit.repos.getContent.and.returnValue(Promise.resolve({
         data: { content, encoding }
-      });
+      }));
       expect(await githubFacade.getPackageVersion("myref")).toEqual("2.1.0");
       expect(octokit.repos.getContent).toHaveBeenCalledOnceWith({
         owner, repo, path: "package.json", ref: "myref"
@@ -241,7 +241,7 @@ describe("githubFacade", () => {
       }));
     });
     it("returns the upload_url", async () => {
-      octokit.repos.createRelease.and.returnValue({ data: { upload_url: "myuploadurl" } });
+      octokit.repos.createRelease.and.returnValue(Promise.resolve({ data: { upload_url: "myuploadurl" } }));
       const uploadUrl = await githubFacade.createRelease({});
       expect(uploadUrl).toEqual("myuploadurl");
     });

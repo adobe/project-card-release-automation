@@ -28,7 +28,9 @@
     "@actions/core": "^1.2.5",
     "@actions/github": "^4.0.0",
     "eslint-plugin-license-header": "^0.2.0",
+    "flush-promises": "^1.0.2",
     "mime-types": "^2.1.30",
+    "promise.defer": "^2.0.0",
     "semver": "^7.3.5"
   },
   "devDependencies": {

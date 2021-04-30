@@ -70,7 +70,7 @@ describe("triggerRelease", () => {
 
   it("calls dispatchWorkflow with the correct variables", async () => {
     eventName = "project_card";
-    handleProjectCardMove.and.returnValue({ ref: "myref", inputs: { version: "1.2.3-alpha.1" } });
+    handleProjectCardMove.and.returnValue(Promise.resolve({ ref: "myref", inputs: { version: "1.2.3-alpha.1" } }));
     build();
     await triggerRelease();
     expect(githubFacade.dispatchWorkflow).toHaveBeenCalledOnceWith(

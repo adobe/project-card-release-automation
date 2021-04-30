@@ -16,7 +16,7 @@ const expectError = require("./helpers/expectError");
 describe("validateNewVersion", () => {
   const run = async (packageVersion, newVersion) => {
     const githubFacade = jasmine.createSpyObj("githubFacade", ["getPackageVersion"]);
-    githubFacade.getPackageVersion.and.returnValue(packageVersion);
+    githubFacade.getPackageVersion.and.returnValue(Promise.resolve(packageVersion));
     const validateNewVersion = injectValidateNewVersion({
       githubFacade, ref: "myref", version: newVersion
     })

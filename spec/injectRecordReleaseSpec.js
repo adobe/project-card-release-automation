@@ -9,7 +9,8 @@ the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTA
 OF ANY KIND, either express or implied. See the License for the specific language
 governing permissions and limitations under the License.
 */
-
+const { default: defer } = require('promise.defer')
+const flushPromises = require('flush-promises');
 const injectRecordRelease = require("../lib/injectRecordRelease");
 
 describe("recordRelease", () => {
@@ -33,6 +34,7 @@ describe("recordRelease", () => {
     artifactClient.downloadAllArtifacts.and.returnValue(Promise.resolve([]));
     fs = jasmine.createSpyObj("fs", ["readdir"]);
     core = jasmine.createSpyObj("core", ["info"]);
+    githubFacade.uploadReleaseAsset.and.returnValue(Promise.resolve);
   });
 
   const run = async () => {
@@ -56,21 +58,21 @@ describe("recordRelease", () => {
 
   it("comments on the release", async () => {
     version = "1.2.3-alpha.0";
-    githubFacade.findIssueNumberByIssueTitle.and.returnValue(42);
+    githubFacade.findIssueNumberByIssueTitle.and.returnValue(Promise.resolve(42));
     await run();
     expect(githubFacade.createIssueComment).toHaveBeenCalledOnceWith(42, "Released 1.2.3-alpha.0");
   });
 
   it("closes the issue", async () => {
     version = "1.2.3";
-    githubFacade.findIssueNumberByIssueTitle.and.returnValue(42);
+    githubFacade.findIssueNumberByIssueTitle.and.returnValue(Promise.resolve(42));
     await run();
     expect(githubFacade.closeIssue).toHaveBeenCalledOnceWith(42);
   });
 
   it("doesn't close the issue", async () => {
     version = "1.2.3-alpha.0";
-    githubFacade.findIssueNumberByIssueTitle.and.returnValue(42);
+    githubFacade.findIssueNumberByIssueTitle.and.returnValue(Promise.resolve(42));
     await run();
     expect(githubFacade.closeIssue).not.toHaveBeenCalled();
   });
@@ -115,7 +117,23 @@ describe("recordRelease", () => {
     expect(githubFacade.uploadReleaseAsset).toHaveBeenCalledWith(
       "myuploadurl", "/my/path/myartifact2/index.zip"
     );
+  });
 
-  })
+  it("waits for the release assets to be done", async () => {
+    version = "1.2.3";
+    githubFacade.createRelease.and.returnValue(Promise.resolve("myuploadurl"));
+    artifactClient.downloadAllArtifacts.and.returnValue(Promise.resolve([
+      { downloadPath: "/my/path/myartifact1" }
+    ]));
+    const deferUpload = defer();
+    fs.readdir.and.returnValue(Promise.resolve(["index.js"]));
+    githubFacade.uploadReleaseAsset.and.returnValue(deferUpload.promise);
+    let runDone = false;
+    const runPromise = run().then(() => runDone = true);
+    await flushPromises();
+    expect(runDone).toBe(false);
+    deferUpload.resolve();
+    await runPromise;
+  });
 
 });

@@ -53,7 +53,7 @@ describe("handleProjectCardMove", () => {
         return Promise.resolve(columnResponse);
       }
     });
-    githubFacade.hasBranch.and.returnValue(true);
+    githubFacade.hasBranch.and.returnValue(Promise.resolve(true));
   });
 
   it("verifies the project number matches", async () => {
@@ -117,7 +117,7 @@ describe("handleProjectCardMove", () => {
   })
 
   it("throws an error when the branch doesn't exist", async () => {
-    githubFacade.hasBranch.and.returnValue(false);
+    githubFacade.hasBranch.and.returnValue(Promise.resolve(false));
     await expectError(
       async () => handleProjectCardMove(),
       "Could not find branch named: main"

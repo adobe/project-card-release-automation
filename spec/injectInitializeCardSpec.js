@@ -32,15 +32,15 @@ describe("initializeCard", () => {
       "createIssueCard",
       "getPackageVersion"
     ]);
-    githubFacade.createIssue.and.returnValue("myissueid");
-    githubFacade.fetchProjectId.and.returnValue("myprojectid");
-    githubFacade.fetchColumnIdByName.and.returnValue("mycolumnid");
+    githubFacade.createIssue.and.returnValue(Promise.resolve("myissueid"));
+    githubFacade.fetchProjectId.and.returnValue(Promise.resolve("myprojectid"));
+    githubFacade.fetchColumnIdByName.and.returnValue(Promise.resolve("mycolumnid"));
 
     core = jasmine.createSpyObj("core", ["info"]);
   });
 
   const build = () => {
-    githubFacade.getPackageVersion.and.returnValue(packageVersion);
+    githubFacade.getPackageVersion.and.returnValue(Promise.resolve(packageVersion));
     initializeCard = injectInitializeCard({
       githubFacade,
       projectNumber,
