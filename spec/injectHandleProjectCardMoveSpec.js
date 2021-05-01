@@ -15,7 +15,6 @@ const expectError = require("./helpers/expectError");
 const expectSoftError = require("./helpers/expectSoftError");
 
 describe("handleProjectCardMove", () => {
-
   let githubFacade;
   const projectUrl = "myprojecturl";
   const contentUrl = "mycontenturl";
@@ -29,20 +28,25 @@ describe("handleProjectCardMove", () => {
   let columnResponse;
 
   beforeEach(() => {
-    githubFacade = jasmine.createSpyObj("githubFacade", ["hasBranch", "getByUrl"]);
+    githubFacade = jasmine.createSpyObj("githubFacade", [
+      "hasBranch",
+      "getByUrl",
+    ]);
     handleProjectCardMove = injectHandleProjectCardMove({
       githubFacade,
       projectUrl,
       contentUrl,
       columnUrl,
       ref,
-      projectNumber
+      projectNumber,
     });
     projectResponse = { data: { number: 42 } };
-    contentResponse = { data: { title: "1.2.3", labels: [{ name: "branch:main" }] } };
+    contentResponse = {
+      data: { title: "1.2.3", labels: [{ name: "branch:main" }] },
+    };
     columnResponse = { data: { name: "Alpha" } };
 
-    githubFacade.getByUrl.and.callFake(url => {
+    githubFacade.getByUrl.and.callFake((url) => {
       if (url === projectUrl) {
         return Promise.resolve(projectResponse);
       }
@@ -84,37 +88,46 @@ describe("handleProjectCardMove", () => {
     columnResponse = { data: { name: "New" } };
     await expectSoftError(
       () => handleProjectCardMove(),
-      "Nothing to do when card moved to \"New\""
+      'Nothing to do when card moved to "New"'
     );
   });
 
   it("uses the card title as the version when moved to the Release column", async () => {
     columnResponse = { data: { name: "Release" } };
-    const { inputs: { version } } = await handleProjectCardMove();
+    const {
+      inputs: { version },
+    } = await handleProjectCardMove();
     expect(version).toEqual("1.2.3");
   });
 
   it("creates a prerelease version", async () => {
     columnResponse = { data: { name: "Beta" } };
-    const { inputs: { version } } = await handleProjectCardMove();
+    const {
+      inputs: { version },
+    } = await handleProjectCardMove();
     expect(version).toEqual("1.2.3-beta.0");
   });
 
   it("uses the branch from the label", async () => {
-    contentResponse = { data: { title: "1.2.3", labels: [
-      { name: "release" },{ name: "branch:mybranch" }
-    ]} };
+    contentResponse = {
+      data: {
+        title: "1.2.3",
+        labels: [{ name: "release" }, { name: "branch:mybranch" }],
+      },
+    };
     const { ref } = await handleProjectCardMove();
     expect(ref).toEqual("refs/heads/mybranch");
   });
 
   it("throws an error when there is no branch label", async () => {
-    contentResponse = { data: { title: "1.2.3", labels: [{ name: "release" }] } };
+    contentResponse = {
+      data: { title: "1.2.3", labels: [{ name: "release" }] },
+    };
     await expectError(
       async () => handleProjectCardMove(),
       "Could not find label with branch name"
     );
-  })
+  });
 
   it("throws an error when the branch doesn't exist", async () => {
     githubFacade.hasBranch.and.returnValue(Promise.resolve(false));
@@ -122,7 +135,7 @@ describe("handleProjectCardMove", () => {
       async () => handleProjectCardMove(),
       "Could not find branch named: main"
     );
-  })
+  });
 
   it("throws an error when the column name has a space in it.", async () => {
     columnResponse = { data: { name: "My Column" } };

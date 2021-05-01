@@ -22,4 +22,4 @@ module.exports = async (func, message, nonZeroExitCode = true) => {
       expect(e.exitCode).toEqual(0);
     }
   }
-}
+};

@@ -30,30 +30,35 @@ describe("initializeCard", () => {
       "fetchProjectId",
       "fetchColumnIdByName",
       "createIssueCard",
-      "getPackageVersion"
+      "getPackageVersion",
     ]);
     githubFacade.createIssue.and.returnValue(Promise.resolve("myissueid"));
     githubFacade.fetchProjectId.and.returnValue(Promise.resolve("myprojectid"));
-    githubFacade.fetchColumnIdByName.and.returnValue(Promise.resolve("mycolumnid"));
+    githubFacade.fetchColumnIdByName.and.returnValue(
+      Promise.resolve("mycolumnid")
+    );
 
     core = jasmine.createSpyObj("core", ["info"]);
   });
 
   const build = () => {
-    githubFacade.getPackageVersion.and.returnValue(Promise.resolve(packageVersion));
+    githubFacade.getPackageVersion.and.returnValue(
+      Promise.resolve(packageVersion)
+    );
     initializeCard = injectInitializeCard({
       githubFacade,
       projectNumber,
       core,
       releaseType,
-      ref
+      ref,
     });
-  }
+  };
 
   it("checks for invalid release types", async () => {
     releaseType = "prerelease";
     build();
-    expectError(initializeCard,
+    expectError(
+      initializeCard,
       "`releaseType` must be major, minor, or patch."
     );
   });
@@ -62,7 +67,8 @@ describe("initializeCard", () => {
     packageVersion = "1.2.3-alpha.1";
     releaseType = "minor";
     build();
-    expectError(initializeCard,
+    expectError(
+      initializeCard,
       "Package.json should contain a version with no prerelease qualifiers, got 1.2.3-alpha.1"
     );
   });
@@ -74,7 +80,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "2.0.0",
       body: jasmine.anything(),
-      labels: ["release","branch:mybranch"]
+      labels: ["release", "branch:mybranch"],
     });
   });
 
@@ -85,7 +91,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.3.0",
       body: jasmine.anything(),
-      labels: ["release","branch:mybranch"]
+      labels: ["release", "branch:mybranch"],
     });
   });
 
@@ -96,7 +102,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.2.4",
       body: jasmine.anything(),
-      labels: ["release","branch:mybranch"]
+      labels: ["release", "branch:mybranch"],
     });
   });
 
@@ -104,7 +110,10 @@ describe("initializeCard", () => {
     releaseType = "major";
     build();
     await initializeCard();
-    expect(githubFacade.createIssueCard).toHaveBeenCalledOnceWith("mycolumnid", "myissueid");
+    expect(githubFacade.createIssueCard).toHaveBeenCalledOnceWith(
+      "mycolumnid",
+      "myissueid"
+    );
   });
 
   it("logs a message", async () => {
@@ -118,6 +127,8 @@ describe("initializeCard", () => {
     releaseType = "major";
     build();
     await initializeCard();
-    expect(githubFacade.getPackageVersion).toHaveBeenCalledOnceWith("refs/heads/mybranch");
-  })
+    expect(githubFacade.getPackageVersion).toHaveBeenCalledOnceWith(
+      "refs/heads/mybranch"
+    );
+  });
 });

@@ -38,16 +38,14 @@ describe("triggerRelease", () => {
       handlePush,
       eventName,
       githubFacade,
-      workflowId
+      workflowId,
     });
   };
 
   it("checks the eventName and throws an error", async () => {
     eventName = "foo";
     build();
-    expectError(triggerRelease,
-      "Unknown event: foo."
-    );
+    expectError(triggerRelease, "Unknown event: foo.");
   });
 
   it("handles project_card event", async () => {
@@ -70,7 +68,9 @@ describe("triggerRelease", () => {
 
   it("calls dispatchWorkflow with the correct variables", async () => {
     eventName = "project_card";
-    handleProjectCardMove.and.returnValue(Promise.resolve({ ref: "myref", inputs: { version: "1.2.3-alpha.1" } }));
+    handleProjectCardMove.and.returnValue(
+      Promise.resolve({ ref: "myref", inputs: { version: "1.2.3-alpha.1" } })
+    );
     build();
     await triggerRelease();
     expect(githubFacade.dispatchWorkflow).toHaveBeenCalledOnceWith(
@@ -86,7 +86,7 @@ describe("triggerRelease", () => {
     eventName = "push";
     handlePush.and.throwError(error);
     build();
-    expectSoftError(triggerRelease, "My Error")
+    expectSoftError(triggerRelease, "My Error");
     expect(githubFacade.dispatchWorkflow).not.toHaveBeenCalled();
   });
 });

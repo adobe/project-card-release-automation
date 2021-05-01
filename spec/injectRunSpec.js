@@ -20,7 +20,7 @@ describe("run", () => {
   beforeEach(() => {
     core = jasmine.createSpyObj("core", ["setFailed", "info"]);
     run = injectRun({ core });
-    func = jasmine.createSpy("func")
+    func = jasmine.createSpy("func");
   });
 
   it("runs a sync function", async () => {
@@ -64,5 +64,4 @@ describe("run", () => {
     await run(func);
     expect(core.info).toHaveBeenCalledOnceWith("myerror");
   });
-
 });

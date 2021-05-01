@@ -17,7 +17,9 @@ describe("assert", () => {
     assert(true, "Should not be thrown");
   });
   it("throws an error", () => {
-    expect(() => assert(false, "Should be thrown")).toThrowError("Should be thrown");
+    expect(() => assert(false, "Should be thrown")).toThrowError(
+      "Should be thrown"
+    );
   });
   it("sets the exitCode on the error", () => {
     try {
@@ -26,7 +28,7 @@ describe("assert", () => {
       expect(e.exitCode).toBe(42);
     }
   });
-  it ("Sets a non-zero default exit code", () => {
+  it("Sets a non-zero default exit code", () => {
     try {
       assert(false, "Should be thrown");
     } catch (e) {

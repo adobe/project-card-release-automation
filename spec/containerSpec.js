@@ -10,36 +10,36 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-const container = require("../lib/container");
 const glob = require("glob");
+const container = require("../lib/container");
 const memoizeGetters = require("../lib/memoizeGetters");
 
 const definedKeys = {};
-Object.keys(container).forEach(key => {
+Object.keys(container).forEach((key) => {
   definedKeys[key] = true;
 });
 
-const test = func => {
+const test = (func) => {
   const handler = {
     get(target, property) {
       if (!definedKeys[property]) {
         fail(`No property defined on container: "${property}".`);
       }
       return undefined;
-    }
-  }
+    },
+  };
   const containerProxy = new Proxy({}, handler);
   func(containerProxy);
 };
 
 describe("container", () => {
-  it("has all the properties needed.", () => {
-    return new Promise(resolve => {
+  it("has all the properties needed.", () =>
+    new Promise((resolve) => {
       glob("lib/**/inject*.js", (err, files) => {
         if (err) {
           fail(err);
         }
-        files.forEach(file => {
+        files.forEach((file) => {
           const inject = require(`../${file}`);
           test(inject);
 
@@ -51,35 +51,30 @@ describe("container", () => {
         });
         resolve();
       });
-    });
-  });
+    }));
 
   // this just tests some assumptions made in container.js.
   it("works", () => {
-    const injectGreeting = ({ a, b }) => () => {
-      return `hello ${a}; goodbye ${b}`;
-    }
-    const injectFoo = ({ c }) => () => {
-      return c;
-    }
+    const injectGreeting = ({ a, b }) => () => `hello ${a}; goodbye ${b}`;
+    const injectFoo = ({ c }) => () => c;
     let cCalled = false;
     const container = memoizeGetters({
       get a() {
-        return "mya"
+        return "mya";
       },
       get b() {
-        return "myb"
+        return "myb";
       },
       get c() {
         cCalled = true;
-        return "myc"
+        return "myc";
       },
       get greeting() {
         return injectGreeting(this);
       },
       get foo() {
         return injectFoo(this);
-      }
+      },
     });
 
     expect(container.greeting()).toEqual("hello mya; goodbye myb");
@@ -92,7 +87,7 @@ describe("container", () => {
     const container = {
       get myfunc() {
         return () => "myfunc";
-      }
+      },
     };
 
     const { myfunc } = container;
