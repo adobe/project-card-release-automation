@@ -56,6 +56,7 @@ describe("handleProjectCardMove", () => {
       if (url === columnUrl) {
         return Promise.resolve(columnResponse);
       }
+      return Promise.reject(new Error(`unknown url ${url}`));
     });
     githubFacade.hasBranch.and.returnValue(Promise.resolve(true));
   });
@@ -115,8 +116,8 @@ describe("handleProjectCardMove", () => {
         labels: [{ name: "release" }, { name: "branch:mybranch" }],
       },
     };
-    const { ref } = await handleProjectCardMove();
-    expect(ref).toEqual("refs/heads/mybranch");
+    const { ref: returnedRef } = await handleProjectCardMove();
+    expect(returnedRef).toEqual("refs/heads/mybranch");
   });
 
   it("throws an error when there is no branch label", async () => {

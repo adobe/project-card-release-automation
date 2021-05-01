@@ -40,6 +40,7 @@ describe("container", () => {
           fail(err);
         }
         files.forEach((file) => {
+          // eslint-disable-next-line import/no-dynamic-require, global-require
           const inject = require(`../${file}`);
           test(inject);
 
@@ -58,7 +59,7 @@ describe("container", () => {
     const injectGreeting = ({ a, b }) => () => `hello ${a}; goodbye ${b}`;
     const injectFoo = ({ c }) => () => c;
     let cCalled = false;
-    const container = memoizeGetters({
+    const memoizedContainer = memoizeGetters({
       get a() {
         return "mya";
       },
@@ -77,20 +78,20 @@ describe("container", () => {
       },
     });
 
-    expect(container.greeting()).toEqual("hello mya; goodbye myb");
+    expect(memoizedContainer.greeting()).toEqual("hello mya; goodbye myb");
     expect(cCalled).toBeFalse();
-    container.foo;
+    expect(memoizedContainer.foo()).toEqual("myc");
     expect(cCalled).toBeTrue();
   });
 
   it("works with returned functions", () => {
-    const container = {
+    const myContainer = {
       get myfunc() {
         return () => "myfunc";
       },
     };
 
-    const { myfunc } = container;
+    const { myfunc } = myContainer;
     expect(myfunc()).toEqual("myfunc");
   });
 });

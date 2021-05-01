@@ -99,7 +99,7 @@ describe("recordRelease", () => {
     version = "1.2.3";
     await run();
     expect(githubFacade.createRelease).toHaveBeenCalledOnceWith({
-      tag_name: "v1.2.3",
+      tagName: "v1.2.3",
       name: "1.2.3",
       body: "1.2.3",
       prerelease: false,
@@ -110,7 +110,7 @@ describe("recordRelease", () => {
     version = "1.2.3-beta.3";
     await run();
     expect(githubFacade.createRelease).toHaveBeenCalledOnceWith({
-      tag_name: "v1.2.3-beta.3",
+      tagName: "v1.2.3-beta.3",
       name: "1.2.3-beta.3",
       body: "1.2.3-beta.3",
       prerelease: true,
@@ -151,7 +151,9 @@ describe("recordRelease", () => {
     fs.readdir.and.returnValue(Promise.resolve(["index.js"]));
     githubFacade.uploadReleaseAsset.and.returnValue(deferUpload.promise);
     let runDone = false;
-    const runPromise = run().then(() => (runDone = true));
+    const runPromise = run().then(() => {
+      runDone = true;
+    });
     await flushPromises();
     expect(runDone).toBe(false);
     deferUpload.resolve();

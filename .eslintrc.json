@@ -19,7 +19,7 @@
     "rules": {
         "license-header/header": [
             "error",
-            "./license-header.js"
+            "./license-header"
         ],
         "ban/ban": [
             "error",
@@ -30,6 +30,8 @@
         ],
         "prettier/prettier": "error",
         "no-param-reassign": ["error", { "props": false }],
-        "func-style": "error"
+        "func-style": "error",
+        "no-restricted-syntax": ["off", "ForOfStatement"],
+        "no-await-in-loop": ["off"]
     }
 }

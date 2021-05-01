@@ -17,7 +17,7 @@ describe("memoizeGetters", () => {
     let calls = 0;
     const obj = {
       get a() {
-        calls++;
+        calls += 1;
         return "a";
       },
     };

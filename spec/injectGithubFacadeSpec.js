@@ -300,7 +300,7 @@ describe("githubFacade", () => {
         Promise.resolve({ data: {} })
       );
       await githubFacade.createRelease({
-        tag_name: "mytagname",
+        tagName: "mytagname",
         name: "myname",
         body: "mybody",
         prerelease: true,
