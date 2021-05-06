@@ -5,9 +5,22 @@ require('./sourcemap-register.js');module.exports =
 /***/ 2862:
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __nccwpck_require__) => {
 
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
 const { run, initializeCard } = __nccwpck_require__(2499);
 
 run(initializeCard);
+
 
 /***/ }),
 
@@ -34,10 +47,23 @@ module.exports = (success, message, exitCode = 1) => {
   }
 };
 
+
 /***/ }),
 
 /***/ 2499:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
 
 const fs = __nccwpck_require__(5747).promises;
 const github = __nccwpck_require__(5438);
@@ -55,11 +81,13 @@ const injectTriggerRelease = __nccwpck_require__(6861);
 const injectValidateNewVersion = __nccwpck_require__(9210);
 const memoizeGetters = __nccwpck_require__(470);
 
-
-const readEnvironmentVariable = name => {
-  assert(process.env[name] != null, `The environment variable ${name} is required`);
+const readEnvironmentVariable = (name) => {
+  assert(
+    process.env[name] != null,
+    `The environment variable ${name} is required`
+  );
   return process.env[name];
-}
+};
 
 module.exports = memoizeGetters({
   // Action Inputs:
@@ -88,12 +116,15 @@ module.exports = memoizeGetters({
           project_url: projectUrl,
           column_url: columnUrl,
           content_url: contentUrl,
-        } = {}
-      } = {}
+        } = {},
+      } = {},
     } = github.context;
     const repository = readEnvironmentVariable("GITHUB_REPOSITORY");
-    assert(repository.includes("/"), "The GITHUB_REPOSITORY environment variable should be of the form ${owner}/${repo}");
-    const [ owner, repo ] = repository.split("/");
+    assert(
+      repository.includes("/"),
+      "The GITHUB_REPOSITORY environment variable should be of the form owner/repo"
+    );
+    const [owner, repo] = repository.split("/");
 
     return {
       ref,
@@ -102,7 +133,7 @@ module.exports = memoizeGetters({
       columnUrl,
       contentUrl,
       repo,
-      owner
+      owner,
     };
   },
   get contentUrl() {
@@ -132,7 +163,7 @@ module.exports = memoizeGetters({
   },
   get octokit() {
     return github.getOctokit(this.token, {
-      previews: ["inertia-preview"] // inertia is the github codename for Projects
+      previews: ["inertia-preview"], // inertia is the github codename for Projects
     });
   },
   get artifactClient() {
@@ -165,152 +196,187 @@ module.exports = memoizeGetters({
   },
   get validateNewVersion() {
     return injectValidateNewVersion(this);
-  }
+  },
 });
+
 
 /***/ }),
 
 /***/ 3045:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const assert = __nccwpck_require__(5957);
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
 const mime = __nccwpck_require__(3583);
 const path = __nccwpck_require__(5622);
+const assert = __nccwpck_require__(5957);
 
-module.exports = ({ octokit, owner, repo, fs }) => {
-  return {
-    /**
-     * @param {string} branch
-     * @returns {boolean} true if the branch exists
-     */
-    async hasBranch(branch) {
-      const { data } = await octokit.git.listMatchingRefs({
-        owner,
-        repo,
-        ref: `heads/${branch}`,
-        per_page: 1
-      });
-      // This returns branches that start with the ref, so we still need to check the name matches.
-      return data.length > 0 && data[0].ref === `refs/heads/${branch}`;
-    },
-    /**
-     * @param {string} url
-     * @returns {object} the resource at that url
-     */
-    getByUrl(url) {
-      return octokit.request(`GET ${url}`);
-    },
-    async createIssue({ title, body, labels }) {
-      const { data: { id } } = await octokit.issues.create({
-        owner,
-        repo,
-        title,
-        body,
-        labels
-      });
-      return id;
-    },
-    async fetchProjectId(projectNumber) {
-      const { data } = await octokit.projects.listForRepo({
-        owner, repo, state: "open"
-      });
-      const project = data.find(project => project.number === projectNumber);
-      assert(project, `Project with number ${projectNumber} not found.`);
-      return project.id;
-    },
-    async fetchColumnIdByName(projectId, columnName) {
-      const { data } = await octokit.projects.listColumns({ project_id: projectId });
-      const column = data.find(column => column.name === columnName);
-      assert(column, `Could not find project column with name "${columnName}".`)
-      return column.id;
-    },
-    async createIssueCard(columnId, issueId) {
-      await octokit.projects.createCard({
-        column_id: columnId,
-        content_id: issueId,
-        content_type: "Issue"
-      });
-    },
-    async getPackageVersion(ref) {
-      const { data: { content, encoding } } = await octokit.repos.getContent({
-        owner,
-        repo,
-        path: "package.json",
-        ref
-      });
-      // The content is base 64 encoded.
-      const packageJson = Buffer.from(content, encoding).toString();
-      const packageObj = JSON.parse(packageJson);
-      return packageObj.version;
-    },
-    async dispatchWorkflow(workflow_id, ref, inputs) {
-      await octokit.actions.createWorkflowDispatch({
-        owner,
-        repo,
-        workflow_id,
-        ref,
-        inputs
-      });
-    },
-    async findIssueNumberByIssueTitle(title) {
-      const { data: { items } } = await octokit.search.issuesAndPullRequests({
-        q: `repo:${owner}/${repo} is:issue is:open in:title ${title}`
-      });
-      const issue = items.find(issue => issue.title === title);
-      if (issue) {
-        return issue.number;
-      }
-      throw new Error(`Could not find issue with title ${title}`);
-    },
-    async createIssueComment(issue_number, body) {
-      await octokit.issues.createComment({
-        owner,
-        repo,
-        issue_number,
-        body
-      });
-    },
-    async closeIssue(issue_number) {
-      await octokit.issues.update({
-        owner,
-        repo,
-        issue_number,
-        state: "closed"
-      });
-    },
-    async createRelease({ tag_name, name, body, prerelease }) {
-      const { data: { upload_url } } = await octokit.repos.createRelease({
-        owner,
-        repo,
-        tag_name,
-        name,
-        body,
-        prerelease
-      });
-      return upload_url;
-    },
-    async uploadReleaseAsset(url, filename) {
-      const headers = {
-        "content-type": mime.lookup(filename) || "application/octet-stream",
-        "content-length": (await fs.lstat(filename)).size
-      };
-      const data = await fs.readFile(filename);
-
-      await octokit.repos.uploadReleaseAsset({
-        url,
-        headers,
-        name: path.basename(filename),
-        data
-      });
+module.exports = ({ octokit, owner, repo, fs }) => ({
+  /**
+   * @param {string} branch
+   * @returns {boolean} true if the branch exists
+   */
+  async hasBranch(branch) {
+    const { data } = await octokit.git.listMatchingRefs({
+      owner,
+      repo,
+      ref: `heads/${branch}`,
+      per_page: 1,
+    });
+    // This returns branches that start with the ref, so we still need to check the name matches.
+    return data.length > 0 && data[0].ref === `refs/heads/${branch}`;
+  },
+  /**
+   * @param {string} url
+   * @returns {object} the resource at that url
+   */
+  getByUrl(url) {
+    return octokit.request(`GET ${url}`);
+  },
+  async createIssue({ title, body, labels }) {
+    const {
+      data: { id },
+    } = await octokit.issues.create({
+      owner,
+      repo,
+      title,
+      body,
+      labels,
+    });
+    return id;
+  },
+  async fetchProjectId(projectNumber) {
+    const { data } = await octokit.projects.listForRepo({
+      owner,
+      repo,
+      state: "open",
+    });
+    const project = data.find((p) => p.number === projectNumber);
+    assert(project, `Project with number ${projectNumber} not found.`);
+    return project.id;
+  },
+  async fetchColumnIdByName(projectId, columnName) {
+    const { data } = await octokit.projects.listColumns({
+      project_id: projectId,
+    });
+    const column = data.find((c) => c.name === columnName);
+    assert(column, `Could not find project column with name "${columnName}".`);
+    return column.id;
+  },
+  async createIssueCard(columnId, issueId) {
+    await octokit.projects.createCard({
+      column_id: columnId,
+      content_id: issueId,
+      content_type: "Issue",
+    });
+  },
+  async getPackageVersion(ref) {
+    const {
+      data: { content, encoding },
+    } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: "package.json",
+      ref,
+    });
+    // The content is base 64 encoded.
+    const packageJson = Buffer.from(content, encoding).toString();
+    const packageObj = JSON.parse(packageJson);
+    return packageObj.version;
+  },
+  async dispatchWorkflow(workflowId, ref, inputs) {
+    await octokit.actions.createWorkflowDispatch({
+      owner,
+      repo,
+      workflow_id: workflowId,
+      ref,
+      inputs,
+    });
+  },
+  async findIssueNumberByIssueTitle(title) {
+    const {
+      data: { items },
+    } = await octokit.search.issuesAndPullRequests({
+      q: `repo:${owner}/${repo} is:issue is:open in:title ${title}`,
+    });
+    const issue = items.find((i) => i.title === title);
+    if (issue) {
+      return issue.number;
     }
+    throw new Error(`Could not find issue with title ${title}`);
+  },
+  async createIssueComment(issueNumber, body) {
+    await octokit.issues.createComment({
+      owner,
+      repo,
+      issue_number: issueNumber,
+      body,
+    });
+  },
+  async closeIssue(issueNumber) {
+    await octokit.issues.update({
+      owner,
+      repo,
+      issue_number: issueNumber,
+      state: "closed",
+    });
+  },
+  async createRelease({ tagName, name, body, prerelease }) {
+    const {
+      data: { upload_url: uploadUrl },
+    } = await octokit.repos.createRelease({
+      owner,
+      repo,
+      tag_name: tagName,
+      name,
+      body,
+      prerelease,
+    });
+    return uploadUrl;
+  },
+  async uploadReleaseAsset(url, filename) {
+    const headers = {
+      "content-type": mime.lookup(filename) || "application/octet-stream",
+      "content-length": (await fs.lstat(filename)).size,
+    };
+    const data = await fs.readFile(filename);
 
-  }
-};
+    await octokit.repos.uploadReleaseAsset({
+      url,
+      headers,
+      name: path.basename(filename),
+      data,
+    });
+  },
+});
+
 
 /***/ }),
 
 /***/ 9704:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
 
 const semver = __nccwpck_require__(1383);
 const assert = __nccwpck_require__(5957);
@@ -321,22 +387,42 @@ module.exports = ({
   projectUrl,
   contentUrl,
   columnUrl,
-  projectNumber }) => async () => {
+  projectNumber,
+}) => async () => {
+  const {
+    data: { number: contextProjectNumber },
+  } = await githubFacade.getByUrl(projectUrl);
+  softAssert(
+    contextProjectNumber === projectNumber,
+    "Card moved on non-release project."
+  );
 
-  const { data: { number: contextProjectNumber } } = await githubFacade.getByUrl(projectUrl);
-  softAssert(contextProjectNumber === projectNumber, "Card moved on non-release project.");
-
-  const { data: { title: issueTitle, labels } } = await githubFacade.getByUrl(contentUrl);
-  assert(semver.valid(issueTitle), `Issue name in project card is not a semantic version: ${issueTitle}`);
-  assert(semver.prerelease(issueTitle) === null, `Issue name in project card should not have prerelease version: ${issueTitle}`);
-  const branchLabel = labels.map(({ name }) => name).find(label => label.startsWith("branch:"))
+  const {
+    data: { title: issueTitle, labels },
+  } = await githubFacade.getByUrl(contentUrl);
+  assert(
+    semver.valid(issueTitle),
+    `Issue name in project card is not a semantic version: ${issueTitle}`
+  );
+  assert(
+    semver.prerelease(issueTitle) === null,
+    `Issue name in project card should not have prerelease version: ${issueTitle}`
+  );
+  const branchLabel = labels
+    .map(({ name }) => name)
+    .find((label) => label.startsWith("branch:"));
   assert(branchLabel !== undefined, "Could not find label with branch name");
   const branchName = branchLabel.substring(7);
-  assert(githubFacade.hasBranch(branchName), `Could not find branch named: ${branchName}`);
+  assert(
+    await githubFacade.hasBranch(branchName),
+    `Could not find branch named: ${branchName}`
+  );
   const ref = `refs/heads/${branchName}`;
 
-  const { data: { name: columnName } } = await githubFacade.getByUrl(columnUrl);
-  softAssert(columnName !== "New", "Nothing to do when card moved to \"New\"");
+  const {
+    data: { name: columnName },
+  } = await githubFacade.getByUrl(columnUrl);
+  softAssert(columnName !== "New", 'Nothing to do when card moved to "New"');
   let newVersion;
   if (columnName === "Release") {
     newVersion = issueTitle;
@@ -344,27 +430,48 @@ module.exports = ({
     newVersion = `${issueTitle}-${columnName.toLowerCase()}.0`;
   }
 
-  softAssert(semver.valid(newVersion), `Invalid prerelease version: ${newVersion}`);
+  softAssert(
+    semver.valid(newVersion),
+    `Invalid prerelease version: ${newVersion}`
+  );
 
   return { ref, inputs: { version: newVersion } };
-}
+};
+
 
 /***/ }),
 
 /***/ 1245:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
 const semver = __nccwpck_require__(1383);
 const softAssert = __nccwpck_require__(3304);
 
 module.exports = ({ githubFacade, ref }) => async () => {
-
   const packageVersion = await githubFacade.getPackageVersion(ref);
 
-  softAssert(semver.valid(packageVersion), `Invalid release version in package.json: ${packageVersion}`);
+  softAssert(
+    semver.valid(packageVersion),
+    `Invalid release version in package.json: ${packageVersion}`
+  );
   const prerelease = semver.prerelease(packageVersion);
   softAssert(prerelease, "No pre-release candidate to release.");
-  softAssert(prerelease.length >= 2, "Pre-release part of the version must have at least 2 parts.");
+  softAssert(
+    prerelease.length >= 2,
+    "Pre-release part of the version must have at least 2 parts."
+  );
 
   // increment version string
   const newVersion = semver.inc(packageVersion, "prerelease");
@@ -372,24 +479,41 @@ module.exports = ({ githubFacade, ref }) => async () => {
   return { ref, inputs: { version: newVersion } };
 };
 
+
 /***/ }),
 
 /***/ 7763:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const assert = __nccwpck_require__(5957);
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
 const semver = __nccwpck_require__(1383);
+const assert = __nccwpck_require__(5957);
 
-module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => async () => {
-
-  assert(
-    ref.startsWith("refs/heads/"),
-    `ref must be a branch, got ${ref}`
-  );
+module.exports = ({
+  githubFacade,
+  projectNumber,
+  core,
+  ref,
+  releaseType,
+}) => async () => {
+  assert(ref.startsWith("refs/heads/"), `ref must be a branch, got ${ref}`);
   const branch = ref.substring(11);
 
   assert(
-    releaseType === "major" || releaseType === "minor" || releaseType === "patch",
+    releaseType === "major" ||
+      releaseType === "minor" ||
+      releaseType === "patch",
     "`releaseType` must be major, minor, or patch."
   );
 
@@ -405,7 +529,7 @@ module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => as
   const issueId = await githubFacade.createIssue({
     title: newVersion,
     body: `Track progress of release ${newVersion}.`,
-    labels: ["release",`branch:${branch}`]
+    labels: ["release", `branch:${branch}`],
   });
   core.info(`Created issue with id: ${issueId}`);
   const projectId = await githubFacade.fetchProjectId(projectNumber);
@@ -414,18 +538,38 @@ module.exports = ({ githubFacade, projectNumber, core, ref, releaseType }) => as
   core.info(`Created card: ${newVersion}`);
 };
 
+
 /***/ }),
 
 /***/ 3505:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
 const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(5622);
 
-module.exports = ({ githubFacade, version, artifactClient, core, fs }) => async () => {
-
+module.exports = ({
+  githubFacade,
+  version,
+  artifactClient,
+  core,
+  fs,
+}) => async () => {
   const issueTitle = semver.coerce(version).raw;
-  const issueNumber = await githubFacade.findIssueNumberByIssueTitle(issueTitle);
+  const issueNumber = await githubFacade.findIssueNumberByIssueTitle(
+    issueTitle
+  );
   core.info("Creating release comment");
   await githubFacade.createIssueComment(issueNumber, `Released ${version}`);
 
@@ -436,10 +580,10 @@ module.exports = ({ githubFacade, version, artifactClient, core, fs }) => async 
   }
 
   const uploadUrl = await githubFacade.createRelease({
-    tag_name: `v${version}`,
+    tagName: `v${version}`,
     name: version,
     body: version,
-    prerelease
+    prerelease,
   });
   const downloadResponse = await artifactClient.downloadAllArtifacts();
 
@@ -448,17 +592,30 @@ module.exports = ({ githubFacade, version, artifactClient, core, fs }) => async 
     for (const filename of files) {
       const fullPath = path.join(response.downloadPath, filename);
       core.info(`Uploading ${fullPath} to release.`);
-      githubFacade.uploadReleaseAsset(uploadUrl, fullPath);
+      await githubFacade.uploadReleaseAsset(uploadUrl, fullPath);
     }
   }
-}
+};
+
 
 /***/ }),
 
 /***/ 4560:
 /***/ ((module) => {
 
-module.exports = ({ core }) => async func => {
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+module.exports = ({ core }) => async (func) => {
   try {
     await func();
   } catch (e) {
@@ -476,58 +633,115 @@ module.exports = ({ core }) => async func => {
   }
 };
 
+
 /***/ }),
 
 /***/ 6861:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
 const assert = __nccwpck_require__(5957);
 
-module.exports = ({ eventName, githubFacade, workflowId, ...container }) => async () => {
-  assert(eventName === "project_card" || eventName === "push", `Unknown event: ${eventName}.`);
+module.exports = ({
+  eventName,
+  githubFacade,
+  workflowId,
+  ...container
+}) => async () => {
+  assert(
+    eventName === "project_card" || eventName === "push",
+    `Unknown event: ${eventName}.`
+  );
 
-  const handler = eventName === "project_card" ? container.handleProjectCardMove : container.handlePush;
+  const handler =
+    eventName === "project_card"
+      ? container.handleProjectCardMove
+      : container.handlePush;
 
   const { ref, inputs } = await handler();
   await githubFacade.dispatchWorkflow(workflowId, ref, inputs);
-}
+};
+
 
 /***/ }),
 
 /***/ 9210:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
 
 const semver = __nccwpck_require__(1383);
 const assert = __nccwpck_require__(5957);
 
 module.exports = ({ githubFacade, version, ref }) => async () => {
-
-  assert(semver.valid(version), `New version is not a valid semantic version: ${version}`);
+  assert(
+    semver.valid(version),
+    `New version is not a valid semantic version: ${version}`
+  );
 
   const packageVersion = await githubFacade.getPackageVersion(ref);
 
-  assert(semver.gt(version, packageVersion), `Versions must be increasing. Attempted ${packageVersion} => ${version}`);
-}
+  assert(
+    semver.gt(version, packageVersion),
+    `Versions must be increasing. Attempted ${packageVersion} => ${version}`
+  );
+};
+
 
 /***/ }),
 
 /***/ 470:
 /***/ ((module) => {
 
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
 
-module.exports = obj => {
-  Object.keys(obj).forEach(key => {
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+module.exports = (obj) => {
+  Object.keys(obj).forEach((key) => {
     const descriptor = Object.getOwnPropertyDescriptor(obj, key);
     if (typeof descriptor.get === "function") {
-      Object.defineProperty(obj, key, { get: () => {
-        delete obj[key];
-        return obj[key] = descriptor.get.call(obj);
-      }});
+      Object.defineProperty(obj, key, {
+        get: () => {
+          delete obj[key];
+          obj[key] = descriptor.get.call(obj);
+          return obj[key];
+        },
+      });
     }
   });
   return obj;
 };
+
 
 /***/ }),
 
@@ -551,6 +765,7 @@ const assert = __nccwpck_require__(5957);
 module.exports = (success, message) => {
   assert(success, message, 0);
 };
+
 
 /***/ }),
 
