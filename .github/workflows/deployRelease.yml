@@ -35,7 +35,7 @@ jobs:
             BRANCH=`echo "v${{ github.event.inputs.version }}" | cut -d. -f1`
             git fetch gh-origin
             git checkout --track gh-origin/$BRANCH
-            git merge gh-origin/main
+            git merge gh-origin/main --strategy-option theirs
             git push gh-origin HEAD:$BRANCH
           fi
       - uses: ./record-release
