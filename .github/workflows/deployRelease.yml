@@ -32,7 +32,7 @@ jobs:
           if [[ "${{ github.event.inputs.version }}" != *"-"* ]]; then
             BRANCH=`echo "v${{ github.event.inputs.version }}" | cut -d. -f1`
             git checkout -B $BRANCH
-            git push gh-origin HEAD:$BRANCH
+            git push --force gh-origin HEAD:$BRANCH
           fi
       - uses: ./record-release
         with:
