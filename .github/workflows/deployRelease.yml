@@ -12,8 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
       - uses: ./validate-version
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -33,9 +31,7 @@ jobs:
           # push to major release branch
           if [[ "${{ github.event.inputs.version }}" != *"-"* ]]; then
             BRANCH=`echo "v${{ github.event.inputs.version }}" | cut -d. -f1`
-            git fetch gh-origin
-            git checkout --track gh-origin/$BRANCH
-            git merge gh-origin/main --strategy-option theirs
+            git checkout -B $BRANCH
             git push gh-origin HEAD:$BRANCH
           fi
       - uses: ./record-release
