@@ -25,7 +25,7 @@
   "homepage": "https://github.com/jonsnyder/project-card-release-automation#readme",
   "dependencies": {
     "@actions/artifact": "^0.5.1",
-    "@actions/core": "^1.2.5",
+    "@actions/core": "^1.2.7",
     "@actions/github": "^4.0.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-config-prettier": "^8.3.0",
@@ -34,14 +34,14 @@
     "eslint-plugin-prettier": "^3.4.0",
     "flush-promises": "^1.0.2",
     "mime-types": "^2.1.30",
-    "prettier": "^2.2.1",
+    "prettier": "^2.3.0",
     "promise.defer": "^2.0.0",
     "semver": "^7.3.5"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.27.0",
+    "@vercel/ncc": "^0.28.5",
     "eslint": "^7.26.0",
-    "glob": "^7.1.6",
+    "glob": "^7.1.7",
     "jasmine": "^3.7.0"
   }
 }

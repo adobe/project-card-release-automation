@@ -3,7 +3,7 @@ on:
   project_card:
     types: [moved]
   push:
-    branch:
+    branches:
       - "main"
 jobs:
   triggerReleaseIfNeeded:
