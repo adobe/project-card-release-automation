@@ -258,7 +258,6 @@ module.exports = ({ octokit, owner, repo, fs }) => ({
     });
   },
   async getPackageVersion(ref) {
-    console.info("getPackageVersion", owner, repo, ref);
     const {
       data: { content, encoding },
     } = await octokit.repos.getContent({
@@ -606,8 +605,7 @@ module.exports = ({ core }) => async (func) => {
       }
     } else {
       // These are unexpected errors so log the whole error.
-      core.setFailed(e);
-      core.error(e.stack);
+      core.setFailed(e.stack);
     }
   }
 };

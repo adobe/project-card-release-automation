@@ -54,7 +54,7 @@ describe("run", () => {
     const error = new Error("myerror");
     func.and.returnValue(Promise.reject(error));
     await run(func);
-    expect(core.setFailed).toHaveBeenCalledOnceWith(error);
+    expect(core.setFailed).toHaveBeenCalledOnceWith(error.stack);
   });
 
   it("handles a zero exitCode", async () => {
