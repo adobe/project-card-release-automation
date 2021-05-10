@@ -6,7 +6,14 @@
   "scripts": {
     "lint": "eslint .",
     "build": "./build.sh",
-    "test": "jasmine"
+    "test": "jasmine",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "./{lib,spec}/**/*.js": [
+      "eslint --cache --fix",
+      "prettier --write"
+    ]
   },
   "repository": {
     "type": "git",
@@ -42,6 +49,8 @@
     "@vercel/ncc": "^0.28.5",
     "eslint": "^7.26.0",
     "glob": "^7.1.7",
-    "jasmine": "^3.7.0"
+    "husky": "^6.0.0",
+    "jasmine": "^3.7.0",
+    "lint-staged": "^11.0.0"
   }
 }
