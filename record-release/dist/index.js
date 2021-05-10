@@ -258,6 +258,7 @@ module.exports = ({ octokit, owner, repo, fs }) => ({
     });
   },
   async getPackageVersion(ref) {
+    console.info("getPackageVersion", owner, repo, ref);
     const {
       data: { content, encoding },
     } = await octokit.repos.getContent({
