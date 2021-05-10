@@ -4,7 +4,7 @@
   "description": "Github actions to automate semantic versioning",
   "main": "index.js",
   "scripts": {
-    "lint": "eslint .",
+    "lint": "eslint --cache --fix \"./{lib,spec}/**/*.js\" && prettier --write \"./{lib,spec}/**/*.js\"",
     "build": "./build.sh",
     "test": "jasmine",
     "prepare": "husky install"

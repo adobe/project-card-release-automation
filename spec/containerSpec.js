@@ -56,8 +56,14 @@ describe("container", () => {
 
   // this just tests some assumptions made in container.js.
   it("works", () => {
-    const injectGreeting = ({ a, b }) => () => `hello ${a}; goodbye ${b}`;
-    const injectFoo = ({ c }) => () => c;
+    const injectGreeting =
+      ({ a, b }) =>
+      () =>
+        `hello ${a}; goodbye ${b}`;
+    const injectFoo =
+      ({ c }) =>
+      () =>
+        c;
     let cCalled = false;
     const memoizedContainer = memoizeGetters({
       get a() {
