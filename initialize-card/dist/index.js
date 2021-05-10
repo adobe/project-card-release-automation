@@ -359,61 +359,57 @@ const semver = __nccwpck_require__(1383);
 const assert = __nccwpck_require__(5957);
 const softAssert = __nccwpck_require__(3304);
 
-module.exports = ({
-  githubFacade,
-  projectUrl,
-  contentUrl,
-  columnUrl,
-  projectNumber,
-}) => async () => {
-  const {
-    data: { number: contextProjectNumber },
-  } = await githubFacade.getByUrl(projectUrl);
-  softAssert(
-    contextProjectNumber === projectNumber,
-    "Card moved on non-release project."
-  );
+module.exports =
+  ({ githubFacade, projectUrl, contentUrl, columnUrl, projectNumber }) =>
+  async () => {
+    const {
+      data: { number: contextProjectNumber },
+    } = await githubFacade.getByUrl(projectUrl);
+    softAssert(
+      contextProjectNumber === projectNumber,
+      "Card moved on non-release project."
+    );
 
-  const {
-    data: { title: issueTitle, labels },
-  } = await githubFacade.getByUrl(contentUrl);
-  assert(
-    semver.valid(issueTitle),
-    `Issue name in project card is not a semantic version: ${issueTitle}`
-  );
-  assert(
-    semver.prerelease(issueTitle) === null,
-    `Issue name in project card should not have prerelease version: ${issueTitle}`
-  );
-  const branchLabel = labels
-    .map(({ name }) => name)
-    .find((label) => label.startsWith("branch:"));
-  assert(branchLabel !== undefined, "Could not find label with branch name");
-  const branchName = branchLabel.substring(7);
-  assert(
-    await githubFacade.hasBranch(branchName),
-    `Could not find branch named: ${branchName}`
-  );
-  const ref = `refs/heads/${branchName}`;
+    const {
+      data: { title: issueTitle, labels },
+    } = await githubFacade.getByUrl(contentUrl);
+    assert(
+      semver.valid(issueTitle),
+      `Issue name in project card is not a semantic version: ${issueTitle}`
+    );
+    assert(
+      semver.prerelease(issueTitle) === null,
+      `Issue name in project card should not have prerelease version: ${issueTitle}`
+    );
+    const branchLabel = labels
+      .map(({ name }) => name)
+      .find((label) => label.startsWith("branch:"));
+    assert(branchLabel !== undefined, "Could not find label with branch name");
+    const branchName = branchLabel.substring(7);
+    assert(
+      await githubFacade.hasBranch(branchName),
+      `Could not find branch named: ${branchName}`
+    );
+    const ref = `refs/heads/${branchName}`;
 
-  const {
-    data: { name: columnName },
-  } = await githubFacade.getByUrl(columnUrl);
-  softAssert(columnName !== "New", 'Nothing to do when card moved to "New"');
-  let newVersion;
-  if (columnName === "Release") {
-    newVersion = issueTitle;
-  } else {
-    newVersion = `${issueTitle}-${columnName.toLowerCase()}.0`;
-  }
+    const {
+      data: { name: columnName },
+    } = await githubFacade.getByUrl(columnUrl);
+    softAssert(columnName !== "New", 'Nothing to do when card moved to "New"');
+    let newVersion;
+    if (columnName === "Release") {
+      newVersion = issueTitle;
+    } else {
+      newVersion = `${issueTitle}-${columnName.toLowerCase()}.0`;
+    }
 
-  softAssert(
-    semver.valid(newVersion),
-    `Invalid prerelease version: ${newVersion}`
-  );
+    softAssert(
+      semver.valid(newVersion),
+      `Invalid prerelease version: ${newVersion}`
+    );
 
-  return { ref, inputs: { version: newVersion } };
-};
+    return { ref, inputs: { version: newVersion } };
+  };
 
 
 /***/ }),
@@ -436,25 +432,27 @@ governing permissions and limitations under the License.
 const semver = __nccwpck_require__(1383);
 const softAssert = __nccwpck_require__(3304);
 
-module.exports = ({ githubFacade, ref }) => async () => {
-  const packageVersion = await githubFacade.getPackageVersion(ref);
+module.exports =
+  ({ githubFacade, ref }) =>
+  async () => {
+    const packageVersion = await githubFacade.getPackageVersion(ref);
 
-  softAssert(
-    semver.valid(packageVersion),
-    `Invalid release version in package.json: ${packageVersion}`
-  );
-  const prerelease = semver.prerelease(packageVersion);
-  softAssert(prerelease, "No pre-release candidate to release.");
-  softAssert(
-    prerelease.length >= 2,
-    "Pre-release part of the version must have at least 2 parts."
-  );
+    softAssert(
+      semver.valid(packageVersion),
+      `Invalid release version in package.json: ${packageVersion}`
+    );
+    const prerelease = semver.prerelease(packageVersion);
+    softAssert(prerelease, "No pre-release candidate to release.");
+    softAssert(
+      prerelease.length >= 2,
+      "Pre-release part of the version must have at least 2 parts."
+    );
 
-  // increment version string
-  const newVersion = semver.inc(packageVersion, "prerelease");
-  // todo: find the issue url
-  return { ref, inputs: { version: newVersion } };
-};
+    // increment version string
+    const newVersion = semver.inc(packageVersion, "prerelease");
+    // todo: find the issue url
+    return { ref, inputs: { version: newVersion } };
+  };
 
 
 /***/ }),
@@ -477,43 +475,39 @@ governing permissions and limitations under the License.
 const semver = __nccwpck_require__(1383);
 const assert = __nccwpck_require__(5957);
 
-module.exports = ({
-  githubFacade,
-  projectNumber,
-  core,
-  ref,
-  releaseType,
-}) => async () => {
-  assert(ref.startsWith("refs/heads/"), `ref must be a branch, got ${ref}`);
-  const branch = ref.substring(11);
+module.exports =
+  ({ githubFacade, projectNumber, core, ref, releaseType }) =>
+  async () => {
+    assert(ref.startsWith("refs/heads/"), `ref must be a branch, got ${ref}`);
+    const branch = ref.substring(11);
 
-  assert(
-    releaseType === "major" ||
-      releaseType === "minor" ||
-      releaseType === "patch",
-    "`releaseType` must be major, minor, or patch."
-  );
+    assert(
+      releaseType === "major" ||
+        releaseType === "minor" ||
+        releaseType === "patch",
+      "`releaseType` must be major, minor, or patch."
+    );
 
-  const packageVersion = await githubFacade.getPackageVersion(ref);
+    const packageVersion = await githubFacade.getPackageVersion(ref);
 
-  assert(
-    semver.prerelease(packageVersion) === null,
-    `Package.json should contain a version with no prerelease qualifiers, got ${packageVersion}`
-  );
+    assert(
+      semver.prerelease(packageVersion) === null,
+      `Package.json should contain a version with no prerelease qualifiers, got ${packageVersion}`
+    );
 
-  const newVersion = semver.inc(packageVersion, releaseType);
+    const newVersion = semver.inc(packageVersion, releaseType);
 
-  const issueId = await githubFacade.createIssue({
-    title: newVersion,
-    body: `Track progress of release ${newVersion}.`,
-    labels: ["release", `branch:${branch}`],
-  });
-  core.info(`Created issue with id: ${issueId}`);
-  const projectId = await githubFacade.fetchProjectId(projectNumber);
-  const columnId = await githubFacade.fetchColumnIdByName(projectId, "New");
-  await githubFacade.createIssueCard(columnId, issueId);
-  core.info(`Created card: ${newVersion}`);
-};
+    const issueId = await githubFacade.createIssue({
+      title: newVersion,
+      body: `Track progress of release ${newVersion}.`,
+      labels: ["release", `branch:${branch}`],
+    });
+    core.info(`Created issue with id: ${issueId}`);
+    const projectId = await githubFacade.fetchProjectId(projectNumber);
+    const columnId = await githubFacade.fetchColumnIdByName(projectId, "New");
+    await githubFacade.createIssueCard(columnId, issueId);
+    core.info(`Created card: ${newVersion}`);
+  };
 
 
 /***/ }),
@@ -536,43 +530,39 @@ governing permissions and limitations under the License.
 const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(5622);
 
-module.exports = ({
-  githubFacade,
-  version,
-  artifactClient,
-  core,
-  fs,
-}) => async () => {
-  const issueTitle = semver.coerce(version).raw;
-  const issueNumber = await githubFacade.findIssueNumberByIssueTitle(
-    issueTitle
-  );
-  core.info("Creating release comment");
-  await githubFacade.createIssueComment(issueNumber, `Released ${version}`);
+module.exports =
+  ({ githubFacade, version, artifactClient, core, fs }) =>
+  async () => {
+    const issueTitle = semver.coerce(version).raw;
+    const issueNumber = await githubFacade.findIssueNumberByIssueTitle(
+      issueTitle
+    );
+    core.info("Creating release comment");
+    await githubFacade.createIssueComment(issueNumber, `Released ${version}`);
 
-  const prerelease = semver.prerelease(version) !== null;
-  if (!prerelease) {
-    core.info("Closing issue");
-    await githubFacade.closeIssue(issueNumber);
-  }
-
-  const uploadUrl = await githubFacade.createRelease({
-    tagName: `v${version}`,
-    name: version,
-    body: version,
-    prerelease,
-  });
-  const downloadResponse = await artifactClient.downloadAllArtifacts();
-
-  for (const response of downloadResponse) {
-    const files = await fs.readdir(response.downloadPath);
-    for (const filename of files) {
-      const fullPath = path.join(response.downloadPath, filename);
-      core.info(`Uploading ${fullPath} to release.`);
-      await githubFacade.uploadReleaseAsset(uploadUrl, fullPath);
+    const prerelease = semver.prerelease(version) !== null;
+    if (!prerelease) {
+      core.info("Closing issue");
+      await githubFacade.closeIssue(issueNumber);
     }
-  }
-};
+
+    const uploadUrl = await githubFacade.createRelease({
+      tagName: `v${version}`,
+      name: version,
+      body: version,
+      prerelease,
+    });
+    const downloadResponse = await artifactClient.downloadAllArtifacts();
+
+    for (const response of downloadResponse) {
+      const files = await fs.readdir(response.downloadPath);
+      for (const filename of files) {
+        const fullPath = path.join(response.downloadPath, filename);
+        core.info(`Uploading ${fullPath} to release.`);
+        await githubFacade.uploadReleaseAsset(uploadUrl, fullPath);
+      }
+    }
+  };
 
 
 /***/ }),
@@ -592,23 +582,25 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-module.exports = ({ core }) => async (func) => {
-  try {
-    await func();
-  } catch (e) {
-    if (e.exitCode !== undefined) {
-      // These are errors from assert and softAssert so just log the message.
-      if (e.exitCode === 0) {
-        core.info(e.message);
+module.exports =
+  ({ core }) =>
+  async (func) => {
+    try {
+      await func();
+    } catch (e) {
+      if (e.exitCode !== undefined) {
+        // These are errors from assert and softAssert so just log the message.
+        if (e.exitCode === 0) {
+          core.info(e.message);
+        } else {
+          core.setFailed(e.message);
+        }
       } else {
-        core.setFailed(e.message);
+        // These are unexpected errors so log the whole error.
+        core.setFailed(e.stack);
       }
-    } else {
-      // These are unexpected errors so log the whole error.
-      core.setFailed(e.stack);
     }
-  }
-};
+  };
 
 
 /***/ }),
@@ -630,25 +622,22 @@ governing permissions and limitations under the License.
 
 const assert = __nccwpck_require__(5957);
 
-module.exports = ({
-  eventName,
-  githubFacade,
-  workflowId,
-  ...container
-}) => async () => {
-  assert(
-    eventName === "project_card" || eventName === "push",
-    `Unknown event: ${eventName}.`
-  );
+module.exports =
+  ({ eventName, githubFacade, workflowId, ...container }) =>
+  async () => {
+    assert(
+      eventName === "project_card" || eventName === "push",
+      `Unknown event: ${eventName}.`
+    );
 
-  const handler =
-    eventName === "project_card"
-      ? container.handleProjectCardMove
-      : container.handlePush;
+    const handler =
+      eventName === "project_card"
+        ? container.handleProjectCardMove
+        : container.handlePush;
 
-  const { ref, inputs } = await handler();
-  await githubFacade.dispatchWorkflow(workflowId, ref, inputs);
-};
+    const { ref, inputs } = await handler();
+    await githubFacade.dispatchWorkflow(workflowId, ref, inputs);
+  };
 
 
 /***/ }),
@@ -671,19 +660,21 @@ governing permissions and limitations under the License.
 const semver = __nccwpck_require__(1383);
 const assert = __nccwpck_require__(5957);
 
-module.exports = ({ githubFacade, version, ref }) => async () => {
-  assert(
-    semver.valid(version),
-    `New version is not a valid semantic version: ${version}`
-  );
+module.exports =
+  ({ githubFacade, version, ref }) =>
+  async () => {
+    assert(
+      semver.valid(version),
+      `New version is not a valid semantic version: ${version}`
+    );
 
-  const packageVersion = await githubFacade.getPackageVersion(ref);
+    const packageVersion = await githubFacade.getPackageVersion(ref);
 
-  assert(
-    semver.gt(version, packageVersion),
-    `Versions must be increasing. Attempted ${packageVersion} => ${version}`
-  );
-};
+    assert(
+      semver.gt(version, packageVersion),
+      `Versions must be increasing. Attempted ${packageVersion} => ${version}`
+    );
+  };
 
 
 /***/ }),
