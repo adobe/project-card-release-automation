@@ -10,7 +10,7 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-const memoizeGetters = require("../lib/memoizeGetters");
+const memoizeGetters = require("../../lib/utils/memoizeGetters");
 
 describe("memoizeGetters", () => {
   it("works", () => {
@@ -19,7 +19,7 @@ describe("memoizeGetters", () => {
       get a() {
         calls += 1;
         return "a";
-      },
+      }
     };
     memoizeGetters(obj);
     expect(obj.a).toEqual("a");

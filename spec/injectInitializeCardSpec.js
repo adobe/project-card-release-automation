@@ -30,7 +30,7 @@ describe("initializeCard", () => {
       "fetchProjectId",
       "fetchColumnIdByName",
       "createIssueCard",
-      "getPackageVersion",
+      "getPackageVersion"
     ]);
     githubFacade.createIssue.and.returnValue(Promise.resolve("myissueid"));
     githubFacade.fetchProjectId.and.returnValue(Promise.resolve("myprojectid"));
@@ -50,7 +50,7 @@ describe("initializeCard", () => {
       projectNumber,
       core,
       releaseType,
-      ref,
+      ref
     });
   };
 
@@ -80,7 +80,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "2.0.0",
       body: jasmine.anything(),
-      labels: ["release", "branch:mybranch"],
+      labels: ["release", "branch:mybranch"]
     });
   });
 
@@ -91,7 +91,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.3.0",
       body: jasmine.anything(),
-      labels: ["release", "branch:mybranch"],
+      labels: ["release", "branch:mybranch"]
     });
   });
 
@@ -102,7 +102,7 @@ describe("initializeCard", () => {
     expect(githubFacade.createIssue).toHaveBeenCalledOnceWith({
       title: "1.2.4",
       body: jasmine.anything(),
-      labels: ["release", "branch:mybranch"],
+      labels: ["release", "branch:mybranch"]
     });
   });
 

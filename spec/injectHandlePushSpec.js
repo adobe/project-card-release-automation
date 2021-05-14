@@ -50,8 +50,8 @@ describe("handlePush", () => {
     expect(await handlePush()).toEqual({
       ref: "myref",
       inputs: {
-        version: "1.2.3-alpha.2",
-      },
+        version: "1.2.3-alpha.2"
+      }
     });
   });
 });

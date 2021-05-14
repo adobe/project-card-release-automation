@@ -20,6 +20,7 @@ describe("recordRelease", () => {
   let version;
   let fs;
   let core;
+  let getReleaseNotes;
 
   beforeEach(() => {
     githubFacade = jasmine.createSpyObj("githubFacade", [
@@ -27,15 +28,16 @@ describe("recordRelease", () => {
       "createIssueComment",
       "closeIssue",
       "createRelease",
-      "uploadReleaseAsset",
+      "uploadReleaseAsset"
     ]);
     artifactClient = jasmine.createSpyObj("artifactClient", [
-      "downloadAllArtifacts",
+      "downloadAllArtifacts"
     ]);
     artifactClient.downloadAllArtifacts.and.returnValue(Promise.resolve([]));
     fs = jasmine.createSpyObj("fs", ["readdir"]);
     core = jasmine.createSpyObj("core", ["info"]);
     githubFacade.uploadReleaseAsset.and.returnValue(Promise.resolve);
+    getReleaseNotes = jasmine.createSpy();
   });
 
   const run = async () => {
@@ -45,6 +47,7 @@ describe("recordRelease", () => {
       artifactClient,
       core,
       fs,
+      getReleaseNotes
     });
     await recordRelease();
   };
@@ -70,10 +73,11 @@ describe("recordRelease", () => {
     githubFacade.findIssueNumberByIssueTitle.and.returnValue(
       Promise.resolve(42)
     );
+    getReleaseNotes.and.returnValue(Promise.resolve("notes"));
     await run();
     expect(githubFacade.createIssueComment).toHaveBeenCalledOnceWith(
       42,
-      "Released 1.2.3-alpha.0"
+      "Released 1.2.3-alpha.0\n\nnotes"
     );
   });
 
@@ -102,7 +106,7 @@ describe("recordRelease", () => {
       tagName: "v1.2.3",
       name: "1.2.3",
       body: "1.2.3",
-      prerelease: false,
+      prerelease: false
     });
   });
 
@@ -113,7 +117,7 @@ describe("recordRelease", () => {
       tagName: "v1.2.3-beta.3",
       name: "1.2.3-beta.3",
       body: "1.2.3-beta.3",
-      prerelease: true,
+      prerelease: true
     });
   });
 
@@ -123,7 +127,7 @@ describe("recordRelease", () => {
     artifactClient.downloadAllArtifacts.and.returnValue(
       Promise.resolve([
         { downloadPath: "/my/path/myartifact1" },
-        { downloadPath: "/my/path/myartifact2" },
+        { downloadPath: "/my/path/myartifact2" }
       ])
     );
     fs.readdir.and.returnValues(

@@ -38,7 +38,7 @@ describe("triggerRelease", () => {
       handlePush,
       eventName,
       githubFacade,
-      workflowId,
+      workflowId
     });
   };
 
