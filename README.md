@@ -78,6 +78,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ github.event.inputs.version }}
+          referencePrefixes: "PDCL-,CORE-,AN-"
+          referenceTargetUrlPrefix: "https://jira.corp.adobe.com/browse/"
 ```
 
 The run step in the workflow code above simply increments the version in package.json, and commits the change. This is where you would put the logic to preform the release process for your repo.
@@ -90,8 +92,8 @@ on:
   project_card:
     types: [moved]
   push:
-    branch:
-      - "**"
+    branches:
+      - "main"
 jobs:
   triggerReleaseIfNeeded:
     name: "Trigger Release If Needed"
