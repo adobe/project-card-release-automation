@@ -442,7 +442,6 @@ module.exports = ({
       { q: `repo:${owner}/${repo} is:issue is:open in:title ${title}` },
       i => i.title === title
     );
-    console.log(JSON.stringify(issue, null, 2));
     assert(issue, `Could not find issue with title ${title}.`);
     return issue.number;
   },
