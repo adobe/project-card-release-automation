@@ -300,7 +300,7 @@ module.exports =
         rows.push([
           buildMarkdownLink(commit.oid.substring(0, 7), commit.url),
           firstLine(commit.message),
-          commit.author.user.login,
+          commit.author.user && commit.author.user.login,
           "",
           extractReferences(commit.message)
         ]);
