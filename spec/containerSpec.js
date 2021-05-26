@@ -12,21 +12,22 @@ governing permissions and limitations under the License.
 
 const glob = require("glob");
 const container = require("../lib/container");
-const memoizeGetters = require("../lib/memoizeGetters");
+const memoizeGetters = require("../lib/utils/memoizeGetters");
 
 const definedKeys = {};
-Object.keys(container).forEach((key) => {
+Object.keys(container).forEach(key => {
   definedKeys[key] = true;
 });
 
-const test = (func) => {
+const test = func => {
   const handler = {
     get(target, property) {
       if (!definedKeys[property]) {
         fail(`No property defined on container: "${property}".`);
       }
-      return undefined;
-    },
+      // return an object in case it is futher deconstructed
+      return {};
+    }
   };
   const containerProxy = new Proxy({}, handler);
   func(containerProxy);
@@ -34,12 +35,12 @@ const test = (func) => {
 
 describe("container", () => {
   it("has all the properties needed.", () =>
-    new Promise((resolve) => {
+    new Promise(resolve => {
       glob("lib/**/inject*.js", (err, files) => {
         if (err) {
           fail(err);
         }
-        files.forEach((file) => {
+        files.forEach(file => {
           // eslint-disable-next-line import/no-dynamic-require, global-require
           const inject = require(`../${file}`);
           test(inject);
@@ -81,7 +82,7 @@ describe("container", () => {
       },
       get foo() {
         return injectFoo(this);
-      },
+      }
     });
 
     expect(memoizedContainer.greeting()).toEqual("hello mya; goodbye myb");
@@ -94,7 +95,7 @@ describe("container", () => {
     const myContainer = {
       get myfunc() {
         return () => "myfunc";
-      },
+      }
     };
 
     const { myfunc } = myContainer;

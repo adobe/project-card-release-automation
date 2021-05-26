@@ -18,6 +18,7 @@ describe("githubFacade", () => {
   const repo = "myrepo";
   let fs;
   let githubFacade;
+  let githubPaginationFacade;
 
   beforeEach(() => {
     octokit = {
@@ -27,49 +28,59 @@ describe("githubFacade", () => {
       projects: jasmine.createSpyObj("octokit.projects", [
         "listForRepo",
         "listColumns",
-        "createCard",
+        "createCard"
       ]),
       repos: jasmine.createSpyObj("octokit.repos", [
         "getContent",
         "createRelease",
-        "uploadReleaseAsset",
+        "uploadReleaseAsset"
       ]),
       actions: jasmine.createSpyObj("octokit.actions", [
-        "createWorkflowDispatch",
-      ]),
+        "createWorkflowDispatch"
+      ])
     };
     fs = jasmine.createSpyObj("fs", ["lstat", "readFile"]);
-    githubFacade = createGithubFacade({ octokit, owner, repo, fs });
+    githubPaginationFacade = jasmine.createSpyObj("githubPaginationFacade", [
+      "getAllMatching",
+      "getOneMatching",
+      "getOneMatchingGraphql",
+      "getAllMatchingGraphql"
+    ]);
+    githubFacade = createGithubFacade({
+      octokit,
+      owner,
+      repo,
+      fs,
+      githubPaginationFacade
+    });
   });
 
   describe("hasBranch", () => {
     it("calls octokit with the correct params", async () => {
-      octokit.git.listMatchingRefs.and.returnValue(
-        Promise.resolve({ data: [] })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve(null)
       );
       await githubFacade.hasBranch("mybranch");
-      expect(octokit.git.listMatchingRefs).toHaveBeenCalledWith({
-        owner,
-        repo,
-        ref: "heads/mybranch",
-        per_page: 1,
-      });
+      expect(githubPaginationFacade.getOneMatching).toHaveBeenCalledWith(
+        octokit.git.listMatchingRefs,
+        { owner, repo, ref: "heads/mybranch" },
+        jasmine.any(Function)
+      );
+      const predicate =
+        githubPaginationFacade.getOneMatching.calls.argsFor(0)[2];
+      expect(predicate({ ref: "refs/heads/mybranch" })).toEqual(true);
+      expect(predicate({ ref: "refs/heads/mybranch2" })).toEqual(false);
+      expect(predicate({ ref: "refs/heads/otherbranch" })).toEqual(false);
     });
     it("returns false when no matching refs", async () => {
-      octokit.git.listMatchingRefs.and.returnValue(
-        Promise.resolve({ data: [] })
-      );
-      expect(await githubFacade.hasBranch("mybranch")).toBeFalse();
-    });
-    it("returns false when matching ref only starts with branch name", async () => {
-      octokit.git.listMatchingRefs.and.returnValue(
-        Promise.resolve({ data: [{ ref: "refs/heads/mybranch2" }] })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve(null)
       );
       expect(await githubFacade.hasBranch("mybranch")).toBeFalse();
     });
     it("returns true", async () => {
-      octokit.git.listMatchingRefs.and.returnValue(
-        Promise.resolve({ data: [{ ref: "refs/heads/mybranch" }] })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve({ ref: "refs/head/mybranch" })
       );
       expect(await githubFacade.hasBranch("mybranch")).toBeTrue();
     });
@@ -94,14 +105,14 @@ describe("githubFacade", () => {
       await githubFacade.createIssue({
         title: "mytitle",
         body: "mybody",
-        labels: ["mylabel"],
+        labels: ["mylabel"]
       });
       expect(octokit.issues.create).toHaveBeenCalledOnceWith({
         owner,
         repo,
         title: "mytitle",
         body: "mybody",
-        labels: ["mylabel"],
+        labels: ["mylabel"]
       });
     });
     it("returns the new id", async () => {
@@ -112,7 +123,7 @@ describe("githubFacade", () => {
         await githubFacade.createIssue({
           title: "mytitle",
           body: "mybody",
-          labels: "mylabel",
+          labels: "mylabel"
         })
       ).toEqual("myid");
     });
@@ -120,53 +131,30 @@ describe("githubFacade", () => {
 
   describe("fetchProjectId", () => {
     it("calls octokit with the correct parameters", async () => {
-      octokit.projects.listForRepo.and.returnValue(
-        Promise.resolve({
-          data: [{ id: "142", number: 42 }],
-        })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve({ id: "142", number: 42 })
       );
       await githubFacade.fetchProjectId(42);
-      expect(octokit.projects.listForRepo).toHaveBeenCalledOnceWith({
-        repo,
-        owner,
-        state: "open",
-      });
+      expect(githubPaginationFacade.getOneMatching).toHaveBeenCalledWith(
+        octokit.projects.listForRepo,
+        { owner, repo, state: "open" },
+        jasmine.any(Function)
+      );
+      const predicate =
+        githubPaginationFacade.getOneMatching.calls.argsFor(0)[2];
+      expect(predicate({ number: 10 })).toEqual(false);
+      expect(predicate({ number: 42 })).toEqual(true);
     });
     it("returns the matching project id", async () => {
-      octokit.projects.listForRepo.and.returnValue(
-        Promise.resolve({
-          data: [
-            { id: "101", number: 1 },
-            { id: "142", number: 42 },
-            { id: "102", number: 2 },
-          ],
-        })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve({ id: "142", number: 42 })
       );
-      expect(await githubFacade.fetchProjectId(42)).toEqual("142");
+      const projectId = await githubFacade.fetchProjectId(42);
+      expect(projectId).toEqual("142");
     });
     it("throws an error when there is no matching project", async () => {
-      octokit.projects.listForRepo.and.returnValue(
-        Promise.resolve({
-          data: [
-            { id: "101", number: 1 },
-            { id: "142", number: 42 },
-            { id: "102", number: 2 },
-          ],
-        })
-      );
-      try {
-        await githubFacade.fetchProjectId(11);
-        fail("Expected an error to be thrown");
-      } catch (e) {
-        expect(e.message).toEqual("Project with number 11 not found.");
-        expect(e.exitCode).not.toEqual(0);
-      }
-    });
-    it("throws an error when there are no open projects", async () => {
-      octokit.projects.listForRepo.and.returnValue(
-        Promise.resolve({
-          data: [],
-        })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve(null)
       );
       try {
         await githubFacade.fetchProjectId(11);
@@ -180,35 +168,33 @@ describe("githubFacade", () => {
 
   describe("fetchColumnIdByName", () => {
     it("calls octokit with the correct parameters", async () => {
-      octokit.projects.listColumns.and.returnValue(
-        Promise.resolve({ data: [{ id: "123", name: "foo" }] })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve({ id: "123", name: "foo" })
       );
       await githubFacade.fetchColumnIdByName("myprojectid", "foo");
-      expect(octokit.projects.listColumns).toHaveBeenCalledOnceWith({
-        project_id: "myprojectid",
-      });
+      expect(githubPaginationFacade.getOneMatching).toHaveBeenCalledWith(
+        octokit.projects.listColumns,
+        { project_id: "myprojectid" },
+        jasmine.any(Function)
+      );
+      const predicate =
+        githubPaginationFacade.getOneMatching.calls.argsFor(0)[2];
+      expect(predicate({ name: "foo" })).toEqual(true);
+      expect(predicate({ name: "bar" })).toEqual(false);
     });
     it("returns the found column id", async () => {
-      octokit.projects.listColumns.and.returnValue(
-        Promise.resolve({
-          data: [
-            { id: "42", name: "answer" },
-            { id: "123", name: "foo" },
-          ],
-        })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve({ id: "123", name: "foo" })
       );
-      expect(
-        await githubFacade.fetchColumnIdByName("myprojectid", "foo")
-      ).toEqual("123");
+      const columnId = await githubFacade.fetchColumnIdByName(
+        "myprojectid",
+        "foo"
+      );
+      expect(columnId).toEqual("123");
     });
     it("throws an error if the column isn't found", async () => {
-      octokit.projects.listColumns.and.returnValue(
-        Promise.resolve({
-          data: [
-            { id: "42", name: "answer" },
-            { id: "123", name: "foo" },
-          ],
-        })
+      githubPaginationFacade.getOneMatching.and.returnValue(
+        Promise.resolve(null)
       );
       try {
         await githubFacade.fetchColumnIdByName("myprojectid", "bar");
@@ -216,20 +202,6 @@ describe("githubFacade", () => {
       } catch (e) {
         expect(e.message).toEqual(
           'Could not find project column with name "bar".'
-        );
-        expect(e.exitCode).not.toEqual(0);
-      }
-    });
-    it("throws an error if there are no columns", async () => {
-      octokit.projects.listColumns.and.returnValue(
-        Promise.resolve({ data: [] })
-      );
-      try {
-        await githubFacade.fetchColumnIdByName("myprojectid", "foo");
-        fail("Expected an error to be thrown.");
-      } catch (e) {
-        expect(e.message).toEqual(
-          'Could not find project column with name "foo".'
         );
         expect(e.exitCode).not.toEqual(0);
       }
@@ -242,7 +214,7 @@ describe("githubFacade", () => {
       expect(octokit.projects.createCard).toHaveBeenCalledOnceWith({
         column_id: "mycolumnid",
         content_id: "myissueid",
-        content_type: "Issue",
+        content_type: "Issue"
       });
     });
   });
@@ -266,7 +238,7 @@ describe("githubFacade", () => {
     it("gets the package version", async () => {
       octokit.repos.getContent.and.returnValue(
         Promise.resolve({
-          data: { content, encoding },
+          data: { content, encoding }
         })
       );
       expect(await githubFacade.getPackageVersion("myref")).toEqual("2.1.0");
@@ -274,7 +246,7 @@ describe("githubFacade", () => {
         owner,
         repo,
         path: "package.json",
-        ref: "myref",
+        ref: "myref"
       });
     });
   });
@@ -282,14 +254,14 @@ describe("githubFacade", () => {
   describe("dispatchWorkflow", () => {
     it("creates a workflow dispatch", async () => {
       await githubFacade.dispatchWorkflow("myworkflowid", "myref", {
-        version: "myversion",
+        version: "myversion"
       });
       expect(octokit.actions.createWorkflowDispatch).toHaveBeenCalledOnceWith({
         owner,
         repo,
         workflow_id: "myworkflowid",
         ref: "myref",
-        inputs: { version: "myversion" },
+        inputs: { version: "myversion" }
       });
     });
   });
@@ -303,7 +275,7 @@ describe("githubFacade", () => {
         tagName: "mytagname",
         name: "myname",
         body: "mybody",
-        prerelease: true,
+        prerelease: true
       });
       expect(
         octokit.repos.createRelease({
@@ -312,7 +284,7 @@ describe("githubFacade", () => {
           tag_name: "mytagname",
           name: "myname",
           body: "mybody",
-          prerelease: true,
+          prerelease: true
         })
       );
     });
@@ -334,10 +306,10 @@ describe("githubFacade", () => {
         url: "myurl",
         headers: {
           "content-type": "application/javascript",
-          "content-length": 42,
+          "content-length": 42
         },
         name: "myfile.js",
-        data: "myfilecontents",
+        data: "myfilecontents"
       });
     });
   });

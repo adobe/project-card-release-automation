@@ -1,0 +1,32 @@
+query fetchChangesToPackageJson($repo:String!, $owner:String!, $ref:String!, $cursor:String) {
+
+  # repository name/owner
+  repository(name: $repo, owner: $owner) {
+    # branch name
+    ref(qualifiedName:$ref) {
+      target {
+        # cast Target to a Commit
+        ... on Commit {
+          # full repo-relative path to blame file
+          history(path:"package.json", first: 10, after:$cursor) {
+            nodes {
+              oid
+              committedDate
+              file(path:"package.json") {
+                object {
+                  ... on Blob {
+                    text
+                  }
+                }
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -10,21 +10,17 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-const assert = require("./utils/assert");
+const buildMarkdownLink = require("../../lib/utils/buildMarkdownLink");
 
-module.exports =
-  ({ eventName, githubFacade, workflowId, ...container }) =>
-  async () => {
-    assert(
-      eventName === "project_card" || eventName === "push",
-      `Unknown event: ${eventName}.`
+describe("buildMarkdownLink", () => {
+  it("works", () => {
+    expect(buildMarkdownLink("mytext", "https://mylink")).toEqual(
+      "[mytext](https://mylink)"
     );
-
-    const handler =
-      eventName === "project_card"
-        ? container.handleProjectCardMove
-        : container.handlePush;
-
-    const { ref, inputs } = await handler();
-    await githubFacade.dispatchWorkflow(workflowId, ref, inputs);
-  };
+  });
+  it("escapes brackets", () => {
+    expect(buildMarkdownLink("[mytext]", "https://mylink")).toEqual(
+      "[\\[mytext\\]](https://mylink)"
+    );
+  });
+});

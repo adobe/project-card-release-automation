@@ -30,7 +30,7 @@ describe("handleProjectCardMove", () => {
   beforeEach(() => {
     githubFacade = jasmine.createSpyObj("githubFacade", [
       "hasBranch",
-      "getByUrl",
+      "getByUrl"
     ]);
     handleProjectCardMove = injectHandleProjectCardMove({
       githubFacade,
@@ -38,15 +38,15 @@ describe("handleProjectCardMove", () => {
       contentUrl,
       columnUrl,
       ref,
-      projectNumber,
+      projectNumber
     });
     projectResponse = { data: { number: 42 } };
     contentResponse = {
-      data: { title: "1.2.3", labels: [{ name: "branch:main" }] },
+      data: { title: "1.2.3", labels: [{ name: "branch:main" }] }
     };
     columnResponse = { data: { name: "Alpha" } };
 
-    githubFacade.getByUrl.and.callFake((url) => {
+    githubFacade.getByUrl.and.callFake(url => {
       if (url === projectUrl) {
         return Promise.resolve(projectResponse);
       }
@@ -96,7 +96,7 @@ describe("handleProjectCardMove", () => {
   it("uses the card title as the version when moved to the Release column", async () => {
     columnResponse = { data: { name: "Release" } };
     const {
-      inputs: { version },
+      inputs: { version }
     } = await handleProjectCardMove();
     expect(version).toEqual("1.2.3");
   });
@@ -104,7 +104,7 @@ describe("handleProjectCardMove", () => {
   it("creates a prerelease version", async () => {
     columnResponse = { data: { name: "Beta" } };
     const {
-      inputs: { version },
+      inputs: { version }
     } = await handleProjectCardMove();
     expect(version).toEqual("1.2.3-beta.0");
   });
@@ -113,8 +113,8 @@ describe("handleProjectCardMove", () => {
     contentResponse = {
       data: {
         title: "1.2.3",
-        labels: [{ name: "release" }, { name: "branch:mybranch" }],
-      },
+        labels: [{ name: "release" }, { name: "branch:mybranch" }]
+      }
     };
     const { ref: returnedRef } = await handleProjectCardMove();
     expect(returnedRef).toEqual("refs/heads/mybranch");
@@ -122,7 +122,7 @@ describe("handleProjectCardMove", () => {
 
   it("throws an error when there is no branch label", async () => {
     contentResponse = {
-      data: { title: "1.2.3", labels: [{ name: "release" }] },
+      data: { title: "1.2.3", labels: [{ name: "release" }] }
     };
     await expectError(
       async () => handleProjectCardMove(),
