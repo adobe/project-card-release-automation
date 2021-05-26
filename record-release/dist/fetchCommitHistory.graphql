@@ -1,0 +1,39 @@
+query fetchCommitHistory($repo:String!, $owner:String!, $ref:String!, $cursor:String) {
+
+  # repository name/owner
+  repository(name: $repo, owner: $owner) {
+    ref(qualifiedName: $ref) {
+      target {
+        ... on Commit {
+          history(first: 20, after: $cursor) {
+            nodes {
+              oid
+              message
+              url
+              author {
+                user {
+                  login
+                }
+              }
+              associatedPullRequests(first:10) {
+                nodes {
+                  number
+                  title
+                  body
+                  permalink
+                  author {
+                    login
+                  }
+                }
+              }
+            },
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    }
+  }
+}

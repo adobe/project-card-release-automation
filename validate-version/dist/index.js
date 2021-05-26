@@ -1,32 +1,6 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 5957:
-/***/ ((module) => {
-
-/*
-Copyright 2021 Adobe. All rights reserved.
-This file is licensed to you under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License. You may obtain a copy
-of the License at http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
-OF ANY KIND, either express or implied. See the License for the specific language
-governing permissions and limitations under the License.
-*/
-
-module.exports = (success, message, exitCode = 1) => {
-  if (!success) {
-    const error = new Error(message);
-    error.exitCode = exitCode;
-    throw error;
-  }
-};
-
-
-/***/ }),
-
 /***/ 2499:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -47,8 +21,13 @@ const github = __nccwpck_require__(5438);
 const artifact = __nccwpck_require__(2605);
 const core = __nccwpck_require__(2186);
 
-const assert = __nccwpck_require__(5957);
+const assert = __nccwpck_require__(3036);
+const memoizeGetters = __nccwpck_require__(7600);
+const extractPullRequestType = __nccwpck_require__(3911);
+const injectExtractReferences = __nccwpck_require__(6450);
+const injectGetReleaseNotes = __nccwpck_require__(4415);
 const injectGithubFacade = __nccwpck_require__(3045);
+const injectGithubPaginationFacade = __nccwpck_require__(4049);
 const injectHandleProjectCardMove = __nccwpck_require__(9704);
 const injectHandlePush = __nccwpck_require__(1245);
 const injectInitializeCard = __nccwpck_require__(7763);
@@ -56,9 +35,8 @@ const injectRecordRelease = __nccwpck_require__(3505);
 const injectRun = __nccwpck_require__(4560);
 const injectTriggerRelease = __nccwpck_require__(6861);
 const injectValidateNewVersion = __nccwpck_require__(9210);
-const memoizeGetters = __nccwpck_require__(470);
 
-const readEnvironmentVariable = (name) => {
+const readEnvironmentVariable = name => {
   assert(
     process.env[name] != null,
     `The environment variable ${name} is required`
@@ -70,6 +48,16 @@ module.exports = memoizeGetters({
   // Action Inputs:
   get projectNumber() {
     return Number(this.core.getInput("projectNumber"));
+  },
+  get referencePrefixes() {
+    const referencePrefixes = this.core.getInput("referencePrefixes");
+    if (!referencePrefixes) {
+      return undefined;
+    }
+    return referencePrefixes.split(",");
+  },
+  get referenceTargetUrlPrefix() {
+    return this.core.getInput("referencesTargetUrlPrefix");
   },
   get releaseType() {
     return this.core.getInput("releaseType");
@@ -92,9 +80,9 @@ module.exports = memoizeGetters({
         project_card: {
           project_url: projectUrl,
           column_url: columnUrl,
-          content_url: contentUrl,
-        } = {},
-      } = {},
+          content_url: contentUrl
+        } = {}
+      } = {}
     } = github.context;
     const repository = readEnvironmentVariable("GITHUB_REPOSITORY");
     assert(
@@ -110,7 +98,7 @@ module.exports = memoizeGetters({
       columnUrl,
       contentUrl,
       repo,
-      owner,
+      owner
     };
   },
   get contentUrl() {
@@ -140,7 +128,7 @@ module.exports = memoizeGetters({
   },
   get octokit() {
     return github.getOctokit(this.token, {
-      previews: ["inertia-preview"], // inertia is the github codename for Projects
+      previews: ["inertia-preview"] // inertia is the github codename for Projects
     });
   },
   get artifactClient() {
@@ -150,8 +138,20 @@ module.exports = memoizeGetters({
     return fs;
   },
   // Injected objects
+  get extractPullRequestType() {
+    return extractPullRequestType;
+  },
+  get extractReferences() {
+    return injectExtractReferences(this);
+  },
+  get getReleaseNotes() {
+    return injectGetReleaseNotes(this);
+  },
   get githubFacade() {
     return injectGithubFacade(this);
+  },
+  get githubPaginationFacade() {
+    return injectGithubPaginationFacade(this);
   },
   get handleProjectCardMove() {
     return injectHandleProjectCardMove(this);
@@ -173,8 +173,156 @@ module.exports = memoizeGetters({
   },
   get validateNewVersion() {
     return injectValidateNewVersion(this);
-  },
+  }
 });
+
+
+/***/ }),
+
+/***/ 3911:
+/***/ ((module) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+const PULL_REQUEST_TYPES = [
+  { name: "Breaking Change", regex: /- \[x\] Breaking change/ },
+  { name: "Feature", regex: /- \[x\] New feature/ },
+  { name: "Bug Fix", regex: /- \[x\] Bug fix/ },
+  { name: "Improvement", regex: /- \[x\] Improvement/ }
+];
+
+module.exports = body => {
+  const pullRequestType = PULL_REQUEST_TYPES.find(({ regex }) =>
+    regex.test(body)
+  );
+  return pullRequestType ? pullRequestType.name : "";
+};
+
+
+/***/ }),
+
+/***/ 6450:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+const buildMarkdownLink = __nccwpck_require__(6981);
+
+const NON_BREAKING_HYPHEN = "&#x2011;";
+
+module.exports = ({ referencePrefixes, referenceTargetUrlPrefix }) => {
+  if (!Array.isArray(referencePrefixes)) {
+    return () => "";
+  }
+
+  const referenceRegex = new RegExp(
+    `(${referencePrefixes.join("|")})[0-9]+`,
+    "g"
+  );
+
+  return (...texts) =>
+    texts
+      .reduce((references, text) => {
+        (text.match(referenceRegex) || []).forEach(match => {
+          if (!references.includes(match)) {
+            references.push(match);
+          }
+        });
+        return references;
+      }, [])
+      .map(reference =>
+        buildMarkdownLink(
+          reference.replace("-", NON_BREAKING_HYPHEN),
+          `${referenceTargetUrlPrefix}${reference}`
+        )
+      )
+      .join("\n");
+};
+
+
+/***/ }),
+
+/***/ 4415:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+const buildMarkdownTable = __nccwpck_require__(623);
+const buildMarkdownLink = __nccwpck_require__(6981);
+const firstLine = __nccwpck_require__(7918);
+
+module.exports =
+  ({ githubFacade, ref, extractReferences, extractPullRequestType }) =>
+  async () => {
+    const lastReleaseCommit = await githubFacade.findCommitWhereVersionChanged(
+      ref
+    );
+    const history = await githubFacade.fetchCommitHistoryUntil(
+      ref,
+      lastReleaseCommit.oid
+    );
+    const pullRequestNumbersAlreadyProcessed = [];
+    const header = ["Link", "Description", "Author", "Type", "Issue(s)"];
+    const rows = [];
+    history.forEach(commit => {
+      if (commit.associatedPullRequests.nodes.length === 0) {
+        // commit with no PR
+        rows.push([
+          buildMarkdownLink(commit.oid.substring(0, 7), commit.url),
+          firstLine(commit.message),
+          commit.author.user.login,
+          "",
+          extractReferences(commit.message)
+        ]);
+      } else {
+        // commit with PR(s)
+        commit.associatedPullRequests.nodes.forEach(pr => {
+          if (!pullRequestNumbersAlreadyProcessed.includes(pr.number)) {
+            pullRequestNumbersAlreadyProcessed.push(pr.number);
+            rows.push([
+              buildMarkdownLink(`#${pr.number}`, pr.permalink),
+              pr.title,
+              pr.author.login,
+              extractPullRequestType(pr.body),
+              extractReferences(pr.title, pr.body)
+            ]);
+          }
+        });
+      }
+    });
+
+    return buildMarkdownTable(header, rows);
+  };
 
 
 /***/ }),
@@ -196,22 +344,30 @@ governing permissions and limitations under the License.
 
 const mime = __nccwpck_require__(3583);
 const path = __nccwpck_require__(5622);
-const assert = __nccwpck_require__(5957);
+const assert = __nccwpck_require__(3036);
 
-module.exports = ({ octokit, owner, repo, fs }) => ({
+module.exports = ({
+  octokit,
+  owner,
+  repo,
+  fs,
+  githubPaginationFacade: {
+    getOneMatching,
+    getOneMatchingGraphql,
+    getAllMatchingGraphql
+  }
+}) => ({
   /**
    * @param {string} branch
    * @returns {boolean} true if the branch exists
    */
   async hasBranch(branch) {
-    const { data } = await octokit.git.listMatchingRefs({
-      owner,
-      repo,
-      ref: `heads/${branch}`,
-      per_page: 1,
-    });
     // This returns branches that start with the ref, so we still need to check the name matches.
-    return data.length > 0 && data[0].ref === `refs/heads/${branch}`;
+    return !!(await getOneMatching(
+      octokit.git.listMatchingRefs,
+      { owner, repo, ref: `heads/${branch}` },
+      item => item.ref === `refs/heads/${branch}`
+    ));
   },
   /**
    * @param {string} url
@@ -222,31 +378,31 @@ module.exports = ({ octokit, owner, repo, fs }) => ({
   },
   async createIssue({ title, body, labels }) {
     const {
-      data: { id },
+      data: { id }
     } = await octokit.issues.create({
       owner,
       repo,
       title,
       body,
-      labels,
+      labels
     });
     return id;
   },
   async fetchProjectId(projectNumber) {
-    const { data } = await octokit.projects.listForRepo({
-      owner,
-      repo,
-      state: "open",
-    });
-    const project = data.find((p) => p.number === projectNumber);
+    const project = await getOneMatching(
+      octokit.projects.listForRepo,
+      { owner, repo, state: "open" },
+      p => p.number === projectNumber
+    );
     assert(project, `Project with number ${projectNumber} not found.`);
     return project.id;
   },
   async fetchColumnIdByName(projectId, columnName) {
-    const { data } = await octokit.projects.listColumns({
-      project_id: projectId,
-    });
-    const column = data.find((c) => c.name === columnName);
+    const column = await getOneMatching(
+      octokit.projects.listColumns,
+      { project_id: projectId },
+      c => c.name === columnName
+    );
     assert(column, `Could not find project column with name "${columnName}".`);
     return column.id;
   },
@@ -254,17 +410,17 @@ module.exports = ({ octokit, owner, repo, fs }) => ({
     await octokit.projects.createCard({
       column_id: columnId,
       content_id: issueId,
-      content_type: "Issue",
+      content_type: "Issue"
     });
   },
   async getPackageVersion(ref) {
     const {
-      data: { content, encoding },
+      data: { content, encoding }
     } = await octokit.repos.getContent({
       owner,
       repo,
       path: "package.json",
-      ref,
+      ref
     });
     // The content is base 64 encoded.
     const packageJson = Buffer.from(content, encoding).toString();
@@ -277,27 +433,24 @@ module.exports = ({ octokit, owner, repo, fs }) => ({
       repo,
       workflow_id: workflowId,
       ref,
-      inputs,
+      inputs
     });
   },
   async findIssueNumberByIssueTitle(title) {
-    const {
-      data: { items },
-    } = await octokit.search.issuesAndPullRequests({
-      q: `repo:${owner}/${repo} is:issue is:open in:title ${title}`,
-    });
-    const issue = items.find((i) => i.title === title);
-    if (issue) {
-      return issue.number;
-    }
-    throw new Error(`Could not find issue with title ${title}`);
+    const issue = getOneMatching(
+      octokit.search.issuesAndPullRequests,
+      { q: `repo:${owner}/${repo} is:issue is:open in:title ${title}` },
+      i => i.title === title
+    );
+    assert(issue, `Could not find issue with title ${title}.`);
+    return issue.number;
   },
   async createIssueComment(issueNumber, body) {
     await octokit.issues.createComment({
       owner,
       repo,
       issue_number: issueNumber,
-      body,
+      body
     });
   },
   async closeIssue(issueNumber) {
@@ -305,26 +458,26 @@ module.exports = ({ octokit, owner, repo, fs }) => ({
       owner,
       repo,
       issue_number: issueNumber,
-      state: "closed",
+      state: "closed"
     });
   },
   async createRelease({ tagName, name, body, prerelease }) {
     const {
-      data: { upload_url: uploadUrl },
+      data: { upload_url: uploadUrl }
     } = await octokit.repos.createRelease({
       owner,
       repo,
       tag_name: tagName,
       name,
       body,
-      prerelease,
+      prerelease
     });
     return uploadUrl;
   },
   async uploadReleaseAsset(url, filename) {
     const headers = {
       "content-type": mime.lookup(filename) || "application/octet-stream",
-      "content-length": (await fs.lstat(filename)).size,
+      "content-length": (await fs.lstat(filename)).size
     };
     const data = await fs.readFile(filename);
 
@@ -332,9 +485,159 @@ module.exports = ({ octokit, owner, repo, fs }) => ({
       url,
       headers,
       name: path.basename(filename),
-      data,
+      data
     });
   },
+  async findCommitWhereVersionChanged(ref) {
+    const fetchChangesToPackageJson = await fs.readFile(
+      __nccwpck_require__.ab + "fetchChangesToPackageJson.graphql",
+      "utf8"
+    );
+
+    let newVersion = null;
+    let lastVersion = null;
+    return getOneMatchingGraphql(
+      async cursor => {
+        const {
+          repository: {
+            ref: {
+              target: { history }
+            }
+          }
+        } = await octokit.graphql(fetchChangesToPackageJson, {
+          owner,
+          repo,
+          ref,
+          cursor
+        });
+        return history;
+      },
+      ({
+        file: {
+          object: { text }
+        }
+      }) => {
+        const { version } = JSON.parse(text);
+        if (newVersion === null) {
+          newVersion = version;
+        } else if (lastVersion === null && newVersion !== version) {
+          lastVersion = version;
+        }
+        return lastVersion !== null && lastVersion !== version;
+      }
+    );
+  },
+  async fetchCommitHistoryUntil(ref, sha) {
+    const fetchCommitHistory = await fs.readFile(
+      __nccwpck_require__.ab + "fetchCommitHistory.graphql",
+      "utf8"
+    );
+
+    return getAllMatchingGraphql(
+      async cursor => {
+        const {
+          repository: {
+            ref: {
+              target: { history }
+            }
+          }
+        } = await octokit.graphql(fetchCommitHistory, {
+          owner,
+          repo,
+          ref,
+          cursor
+        });
+        return history;
+      },
+      ({ oid }) => oid !== sha
+    );
+  }
+});
+
+
+/***/ }),
+
+/***/ 4049:
+/***/ ((module) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+module.exports = ({ octokit: { paginate } }) => ({
+  async getAllMatching(endpoint, options, predicate) {
+    const matchingItems = [];
+    await paginate(endpoint, options, ({ data: items }, done) => {
+      for (const item of items) {
+        if (predicate(item)) {
+          matchingItems.push(item);
+        } else {
+          done();
+          break;
+        }
+      }
+    });
+    return matchingItems;
+  },
+  async getOneMatching(endpoint, options, predicate) {
+    let matchingItem = null;
+    await paginate(endpoint, options, ({ data: items }, done) => {
+      for (const item of items) {
+        if (predicate(item)) {
+          matchingItem = item;
+          done();
+          break;
+        }
+      }
+    });
+    return matchingItem;
+  },
+  async getAllMatchingGraphql(query, predicate) {
+    const matchingItems = [];
+    let cursor = null;
+    let done = false;
+    while (!done) {
+      const { nodes, pageInfo } = await query(cursor);
+      for (const node of nodes) {
+        if (!predicate(node)) {
+          done = true;
+          break;
+        }
+        matchingItems.push(node);
+      }
+      cursor = pageInfo.endCursor;
+      if (!pageInfo.hasNextPage || !cursor) {
+        break;
+      }
+    }
+    return matchingItems;
+  },
+  async getOneMatchingGraphql(query, predicate) {
+    let matchingItem = null;
+    let cursor = null;
+    while (matchingItem === null) {
+      const { nodes, pageInfo } = await query(cursor);
+      for (const node of nodes) {
+        if (predicate(node)) {
+          matchingItem = node;
+          break;
+        }
+      }
+      cursor = pageInfo.endCursor;
+      if (!pageInfo.hasNextPage || !cursor) {
+        break;
+      }
+    }
+    return matchingItem;
+  }
 });
 
 
@@ -356,14 +659,14 @@ governing permissions and limitations under the License.
 */
 
 const semver = __nccwpck_require__(1383);
-const assert = __nccwpck_require__(5957);
-const softAssert = __nccwpck_require__(3304);
+const assert = __nccwpck_require__(3036);
+const softAssert = __nccwpck_require__(6261);
 
 module.exports =
   ({ githubFacade, projectUrl, contentUrl, columnUrl, projectNumber }) =>
   async () => {
     const {
-      data: { number: contextProjectNumber },
+      data: { number: contextProjectNumber }
     } = await githubFacade.getByUrl(projectUrl);
     softAssert(
       contextProjectNumber === projectNumber,
@@ -371,7 +674,7 @@ module.exports =
     );
 
     const {
-      data: { title: issueTitle, labels },
+      data: { title: issueTitle, labels }
     } = await githubFacade.getByUrl(contentUrl);
     assert(
       semver.valid(issueTitle),
@@ -383,7 +686,7 @@ module.exports =
     );
     const branchLabel = labels
       .map(({ name }) => name)
-      .find((label) => label.startsWith("branch:"));
+      .find(label => label.startsWith("branch:"));
     assert(branchLabel !== undefined, "Could not find label with branch name");
     const branchName = branchLabel.substring(7);
     assert(
@@ -393,7 +696,7 @@ module.exports =
     const ref = `refs/heads/${branchName}`;
 
     const {
-      data: { name: columnName },
+      data: { name: columnName }
     } = await githubFacade.getByUrl(columnUrl);
     softAssert(columnName !== "New", 'Nothing to do when card moved to "New"');
     let newVersion;
@@ -430,7 +733,7 @@ governing permissions and limitations under the License.
 */
 
 const semver = __nccwpck_require__(1383);
-const softAssert = __nccwpck_require__(3304);
+const softAssert = __nccwpck_require__(6261);
 
 module.exports =
   ({ githubFacade, ref }) =>
@@ -473,7 +776,7 @@ governing permissions and limitations under the License.
 */
 
 const semver = __nccwpck_require__(1383);
-const assert = __nccwpck_require__(5957);
+const assert = __nccwpck_require__(3036);
 
 module.exports =
   ({ githubFacade, projectNumber, core, ref, releaseType }) =>
@@ -500,7 +803,7 @@ module.exports =
     const issueId = await githubFacade.createIssue({
       title: newVersion,
       body: `Track progress of release ${newVersion}.`,
-      labels: ["release", `branch:${branch}`],
+      labels: ["release", `branch:${branch}`]
     });
     core.info(`Created issue with id: ${issueId}`);
     const projectId = await githubFacade.fetchProjectId(projectNumber);
@@ -531,14 +834,23 @@ const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(5622);
 
 module.exports =
-  ({ githubFacade, version, artifactClient, core, fs }) =>
+  ({ githubFacade, version, artifactClient, core, fs, getReleaseNotes }) =>
   async () => {
     const issueTitle = semver.coerce(version).raw;
     const issueNumber = await githubFacade.findIssueNumberByIssueTitle(
       issueTitle
     );
+    // get tagname of previous version
+    // get ref for that tagname
+    // list commits until you get to that tagname
+    // list merged PRs with "merge_commit_sha" included in the commit hashes
+    // Create table with merged PR info inside of a comment
     core.info("Creating release comment");
-    await githubFacade.createIssueComment(issueNumber, `Released ${version}`);
+    const releaseNotes = await getReleaseNotes();
+    await githubFacade.createIssueComment(
+      issueNumber,
+      `Released ${version}\n\n${releaseNotes}`
+    );
 
     const prerelease = semver.prerelease(version) !== null;
     if (!prerelease) {
@@ -550,7 +862,7 @@ module.exports =
       tagName: `v${version}`,
       name: version,
       body: version,
-      prerelease,
+      prerelease
     });
     const downloadResponse = await artifactClient.downloadAllArtifacts();
 
@@ -584,7 +896,7 @@ governing permissions and limitations under the License.
 
 module.exports =
   ({ core }) =>
-  async (func) => {
+  async func => {
     try {
       await func();
     } catch (e) {
@@ -620,7 +932,7 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-const assert = __nccwpck_require__(5957);
+const assert = __nccwpck_require__(3036);
 
 module.exports =
   ({ eventName, githubFacade, workflowId, ...container }) =>
@@ -658,7 +970,7 @@ governing permissions and limitations under the License.
 */
 
 const semver = __nccwpck_require__(1383);
-const assert = __nccwpck_require__(5957);
+const assert = __nccwpck_require__(3036);
 
 module.exports =
   ({ githubFacade, version, ref }) =>
@@ -679,7 +991,7 @@ module.exports =
 
 /***/ }),
 
-/***/ 470:
+/***/ 3036:
 /***/ ((module) => {
 
 /*
@@ -694,8 +1006,111 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-module.exports = (obj) => {
-  Object.keys(obj).forEach((key) => {
+module.exports = (success, message, exitCode = 1) => {
+  if (!success) {
+    const error = new Error(message);
+    error.exitCode = exitCode;
+    throw error;
+  }
+};
+
+
+/***/ }),
+
+/***/ 6981:
+/***/ ((module) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+const escapeLinkText = text => text.replace(/\[/, "\\[").replace(/\]/, "\\]");
+
+module.exports = (text, url) => `[${escapeLinkText(text)}](${url})`;
+
+
+/***/ }),
+
+/***/ 623:
+/***/ ((module) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+const escapeTableCell = cell =>
+  cell.replace(/\|/g, "|").replace(/(\r\n|\r|\n)/g, "<br/>");
+
+module.exports = (header, rows) => {
+  const lineRow = Array(header.length).fill("---");
+
+  return `${[header, lineRow, ...rows]
+    .map(row => row.map(escapeTableCell).join("|"))
+    .join("\n")}\n`;
+};
+
+
+/***/ }),
+
+/***/ 7918:
+/***/ ((module) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+module.exports = string => {
+  const newlineIndex = string.search(/(\r\n|\r|\n)/);
+  if (newlineIndex === -1) {
+    return string;
+  }
+  return string.substring(0, newlineIndex);
+};
+
+
+/***/ }),
+
+/***/ 7600:
+/***/ ((module) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+module.exports = obj => {
+  Object.keys(obj).forEach(key => {
     const descriptor = Object.getOwnPropertyDescriptor(obj, key);
     if (typeof descriptor.get === "function") {
       Object.defineProperty(obj, key, {
@@ -703,7 +1118,7 @@ module.exports = (obj) => {
           delete obj[key];
           obj[key] = descriptor.get.call(obj);
           return obj[key];
-        },
+        }
       });
     }
   });
@@ -713,7 +1128,7 @@ module.exports = (obj) => {
 
 /***/ }),
 
-/***/ 3304:
+/***/ 6261:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 /*
@@ -728,7 +1143,7 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-const assert = __nccwpck_require__(5957);
+const assert = __nccwpck_require__(3036);
 
 module.exports = (success, message) => {
   assert(success, message, 0);
