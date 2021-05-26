@@ -1,6 +1,6 @@
 {
   "name": "project-card-release-automation",
-  "version": "1.1.9-rc.5",
+  "version": "1.1.9-rc.6",
   "description": "Github actions to automate semantic versioning",
   "main": "index.js",
   "scripts": {

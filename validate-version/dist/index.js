@@ -443,7 +443,7 @@ module.exports = ({
       i => i.title === title
     );
     assert(issue, `Could not find issue with title ${title}.`);
-    return issue.number;
+    return issue.id;
   },
   async createIssueComment(issueNumber, body) {
     await octokit.issues.createComment({
