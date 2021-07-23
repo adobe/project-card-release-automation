@@ -66,6 +66,15 @@ describe("triggerRelease", () => {
     expect(githubFacade.dispatchWorkflow).toHaveBeenCalled();
   });
 
+  it("handles workflow_dispatch event", async () => {
+    eventName = "workflow_dispatch";
+    build();
+    await triggerRelease();
+    expect(handleProjectCardMove).not.toHaveBeenCalled();
+    expect(handlePushOrDispatch).toHaveBeenCalledOnceWith();
+    expect(githubFacade.dispatchWorkflow).toHaveBeenCalled();
+  });
+
   it("calls dispatchWorkflow with the correct variables", async () => {
     eventName = "project_card";
     handleProjectCardMove.and.returnValue(
