@@ -10,35 +10,38 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-const injectHandlePush = require("../lib/injectHandlePush");
+const injectHandlePushOrDispatch = require("../lib/injectHandlePushOrDispatch");
 const expectSoftError = require("./helpers/expectSoftError");
 
-describe("handlePush", () => {
+describe("handlePushOrDispatch", () => {
   let githubFacade;
   const ref = "myref";
-  let handlePush;
+  let handlePushOrDispatch;
 
   beforeEach(() => {
     githubFacade = jasmine.createSpyObj("githubFacade", ["getPackageVersion"]);
-    handlePush = injectHandlePush({ githubFacade, ref });
+    handlePushOrDispatch = injectHandlePushOrDispatch({ githubFacade, ref });
   });
 
   it("checks for invalid release versions in package.json", async () => {
     githubFacade.getPackageVersion.and.returnValue(Promise.resolve("foo.bar"));
     await expectSoftError(
-      handlePush,
+      handlePushOrDispatch,
       "Invalid release version in package.json: foo.bar"
     );
   });
   it("checks that there is a prerelease version already in package.json", async () => {
     githubFacade.getPackageVersion.and.returnValue(Promise.resolve("1.2.3"));
-    await expectSoftError(handlePush, "No pre-release candidate to release.");
+    await expectSoftError(
+      handlePushOrDispatch,
+      "No pre-release candidate to release."
+    );
   });
 
   it("checks that the prerelease format has at least two parts", async () => {
     githubFacade.getPackageVersion.and.returnValue(Promise.resolve("1.2.3-0"));
     await expectSoftError(
-      handlePush,
+      handlePushOrDispatch,
       "Pre-release part of the version must have at least 2 parts."
     );
   });
@@ -47,7 +50,7 @@ describe("handlePush", () => {
     githubFacade.getPackageVersion.and.returnValue(
       Promise.resolve("1.2.3-alpha.1")
     );
-    expect(await handlePush()).toEqual({
+    expect(await handlePushOrDispatch()).toEqual({
       ref: "myref",
       inputs: {
         version: "1.2.3-alpha.2"

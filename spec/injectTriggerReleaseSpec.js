@@ -16,7 +16,7 @@ const expectSoftError = require("./helpers/expectSoftError");
 
 describe("triggerRelease", () => {
   let handleProjectCardMove;
-  let handlePush;
+  let handlePushOrDispatch;
   let workflowId;
   let eventName;
   let githubFacade;
@@ -25,8 +25,8 @@ describe("triggerRelease", () => {
   beforeEach(() => {
     handleProjectCardMove = jasmine.createSpy("handleProjectCardMove");
     handleProjectCardMove.and.returnValue(Promise.resolve({}));
-    handlePush = jasmine.createSpy("handlePush");
-    handlePush.and.returnValue(Promise.resolve({}));
+    handlePushOrDispatch = jasmine.createSpy("handlePushOrDispatch");
+    handlePushOrDispatch.and.returnValue(Promise.resolve({}));
     eventName = "project_card";
     githubFacade = jasmine.createSpyObj("githubFacade", ["dispatchWorkflow"]);
     workflowId = "myworkflowid";
@@ -35,7 +35,7 @@ describe("triggerRelease", () => {
   const build = () => {
     triggerRelease = injectTriggerRelease({
       handleProjectCardMove,
-      handlePush,
+      handlePushOrDispatch,
       eventName,
       githubFacade,
       workflowId
@@ -53,7 +53,7 @@ describe("triggerRelease", () => {
     build();
     await triggerRelease();
     expect(handleProjectCardMove).toHaveBeenCalledOnceWith();
-    expect(handlePush).not.toHaveBeenCalled();
+    expect(handlePushOrDispatch).not.toHaveBeenCalled();
     expect(githubFacade.dispatchWorkflow).toHaveBeenCalled();
   });
 
@@ -62,7 +62,7 @@ describe("triggerRelease", () => {
     build();
     await triggerRelease();
     expect(handleProjectCardMove).not.toHaveBeenCalled();
-    expect(handlePush).toHaveBeenCalledOnceWith();
+    expect(handlePushOrDispatch).toHaveBeenCalledOnceWith();
     expect(githubFacade.dispatchWorkflow).toHaveBeenCalled();
   });
 
@@ -84,7 +84,7 @@ describe("triggerRelease", () => {
     const error = new Error("My Error");
     error.exitCode = 0;
     eventName = "push";
-    handlePush.and.throwError(error);
+    handlePushOrDispatch.and.throwError(error);
     build();
     expectSoftError(triggerRelease, "My Error");
     expect(githubFacade.dispatchWorkflow).not.toHaveBeenCalled();
