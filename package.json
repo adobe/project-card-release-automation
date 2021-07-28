@@ -44,7 +44,7 @@
     "eslint-plugin-license-header": "^0.2.0",
     "eslint-plugin-prettier": "^3.4.0",
     "flush-promises": "^1.0.2",
-    "mime-types": "^2.1.30",
+    "mime-types": "^2.1.32",
     "prettier": "^2.3.0",
     "promise.defer": "^2.0.0",
     "semver": "^7.3.5"
