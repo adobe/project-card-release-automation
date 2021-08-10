@@ -29,7 +29,7 @@ const injectGetReleaseNotes = __nccwpck_require__(4415);
 const injectGithubFacade = __nccwpck_require__(3045);
 const injectGithubPaginationFacade = __nccwpck_require__(4049);
 const injectHandleProjectCardMove = __nccwpck_require__(9704);
-const injectHandlePush = __nccwpck_require__(1245);
+const injectHandlePushOrDispatch = __nccwpck_require__(9150);
 const injectInitializeCard = __nccwpck_require__(7763);
 const injectRecordRelease = __nccwpck_require__(3505);
 const injectRun = __nccwpck_require__(4560);
@@ -156,8 +156,8 @@ module.exports = memoizeGetters({
   get handleProjectCardMove() {
     return injectHandleProjectCardMove(this);
   },
-  get handlePush() {
-    return injectHandlePush(this);
+  get handlePushOrDispatch() {
+    return injectHandlePushOrDispatch(this);
   },
   get initializeCard() {
     return injectInitializeCard(this);
@@ -717,7 +717,7 @@ module.exports =
 
 /***/ }),
 
-/***/ 1245:
+/***/ 9150:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 /*
@@ -934,14 +934,18 @@ module.exports =
   ({ eventName, githubFacade, workflowId, ...container }) =>
   async () => {
     assert(
-      eventName === "project_card" || eventName === "push",
+      eventName === "project_card" ||
+        eventName === "push" ||
+        eventName === "workflow_dispatch",
       `Unknown event: ${eventName}.`
     );
 
+    // Don't include the handlers in the function signature so that the
+    // container only builds the necessary handler.
     const handler =
       eventName === "project_card"
         ? container.handleProjectCardMove
-        : container.handlePush;
+        : container.handlePushOrDispatch;
 
     const { ref, inputs } = await handler();
     await githubFacade.dispatchWorkflow(workflowId, ref, inputs);

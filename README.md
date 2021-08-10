@@ -94,6 +94,8 @@ on:
   push:
     branches:
       - "main"
+  workflow_dispatch:
+
 jobs:
   triggerReleaseIfNeeded:
     name: "Trigger Release If Needed"
@@ -106,7 +108,7 @@ jobs:
           projectNumber: 1
 ```
 
-You can change the branch section to only trigger based on the branches that you will use for releases. Be sure to change the workflowId to be the name of the deploy release YAML file, and change the projectNumber as before.
+You can change the branch section to only trigger based on the branches that you will use for releases. Be sure to change the workflowId to be the name of the deploy release YAML file, and change the projectNumber as before. This workflow triggers when a project card is moved, when new commits are pushed, or when the workflow is dispatched manually.
 
 ## Development
 
