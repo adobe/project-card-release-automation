@@ -40,7 +40,7 @@ jobs:
     name: "Initialize Intended Release"
     runs-on: ubuntu-latest
     steps:
-      - uses: jonsnyder/project-card-release-automation/initialize-card@v1
+      - uses: adobe/project-card-release-automation/initialize-card@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           releaseType: ${{ github.event.inputs.type }}
@@ -63,7 +63,7 @@ jobs:
     name: "Release"
     runs-on: ubuntu-latest
     steps:
-      - uses: jonsnyder/project-card-release-automation/validate-version@v1
+      - uses: adobe/project-card-release-automation/validate-version@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ github.event.inputs.version }}
@@ -74,7 +74,7 @@ jobs:
           git remote add gh-origin https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git/
           npm version ${{ github.event.inputs.version }}
           git push gh-origin HEAD:${GITHUB_REF} --follow-tags
-      - uses: jonsnyder/project-card-release-automation/record-release@v1
+      - uses: adobe/project-card-release-automation/record-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ github.event.inputs.version }}
@@ -101,7 +101,7 @@ jobs:
     name: "Trigger Release If Needed"
     runs-on: ubuntu-latest
     steps:
-      - uses: jonsnyder/project-card-release-automation/trigger-release@v1
+      - uses: adobe/project-card-release-automation/trigger-release@v1
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           workflowId: "deployRelease.yml"
