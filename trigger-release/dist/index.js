@@ -77,7 +77,6 @@ module.exports = memoizeGetters({
     const {
       ref,
       eventName,
-      actor,
       payload: {
         project_card: {
           project_url: projectUrl,
@@ -96,7 +95,6 @@ module.exports = memoizeGetters({
     return {
       ref,
       eventName,
-      actor,
       projectUrl,
       columnUrl,
       contentUrl,
@@ -105,7 +103,7 @@ module.exports = memoizeGetters({
     };
   },
   get actor() {
-    return this.githubContext.actor;
+    return "github-actions";
   },
   get contentUrl() {
     return this.githubContext.contentUrl;
@@ -556,6 +554,10 @@ module.exports = ({
         }
       }) => login === author
     );
+    if (allComments.length <= 1) {
+      // We don't want to delete the initial comment "Track progress of"
+      return undefined;
+    }
     const {
       node: { databaseId }
     } = allComments[allComments.length - 1];
@@ -910,6 +912,7 @@ governing permissions and limitations under the License.
 
 const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(5622);
+const buildMarkdownLink = __nccwpck_require__(6981);
 
 module.exports =
   ({
@@ -919,38 +922,16 @@ module.exports =
     core,
     fs,
     getAutoReleaseNotes,
-    actor
+    owner,
+    repo
   }) =>
   async () => {
-    const issueTitle = semver.coerce(version).raw;
-    const issueNumber = await githubFacade.findIssueNumberByIssueTitle(
-      issueTitle
-    );
-
-    core.info(`Deleting old release notes by ${actor}`);
-    try {
-      const oldReleaseNotesCommentId =
-        await githubFacade.findLastIssueCommentIdBy(issueNumber, actor);
-      await githubFacade.deleteComment(oldReleaseNotesCommentId);
-    } catch (e) {
-      core.info(`Error deleting old release notes:`, e);
-    }
-
-    core.info(`Creating release comment on issue: ${issueNumber}`);
-    await githubFacade.createIssueComment(issueNumber, `Released ${version}\n`);
-    const releaseNotes = await getAutoReleaseNotes();
-    await githubFacade.createIssueComment(issueNumber, releaseNotes);
-
     const prerelease = semver.prerelease(version) !== null;
-    if (!prerelease) {
-      core.info("Closing issue");
-      await githubFacade.closeIssue(issueNumber);
-    }
-
+    const releaseNotes = await getAutoReleaseNotes();
     const uploadUrl = await githubFacade.createRelease({
       tagName: `v${version}`,
       name: version,
-      body: version,
+      body: releaseNotes,
       prerelease
     });
     const downloadResponse = await artifactClient.downloadAllArtifacts();
@@ -962,6 +943,23 @@ module.exports =
         core.info(`Uploading ${fullPath} to release.`);
         await githubFacade.uploadReleaseAsset(uploadUrl, fullPath);
       }
+    }
+
+    const issueTitle = semver.coerce(version).raw;
+    const issueNumber = await githubFacade.findIssueNumberByIssueTitle(
+      issueTitle
+    );
+
+    core.info(`Creating release comment on issue: ${issueNumber}`);
+    const link = buildMarkdownLink(
+      version,
+      `/${owner}/${repo}/releases/tag/v${version}`
+    );
+    await githubFacade.createIssueComment(issueNumber, `Released ${link}\n`);
+
+    if (!prerelease) {
+      core.info("Closing issue");
+      await githubFacade.closeIssue(issueNumber);
     }
   };
 
