@@ -20,7 +20,7 @@ describe("recordRelease", () => {
   let version;
   let fs;
   let core;
-  let getReleaseNotes;
+  let getAutoReleaseNotes;
 
   beforeEach(() => {
     githubFacade = jasmine.createSpyObj("githubFacade", [
@@ -37,7 +37,7 @@ describe("recordRelease", () => {
     fs = jasmine.createSpyObj("fs", ["readdir"]);
     core = jasmine.createSpyObj("core", ["info"]);
     githubFacade.uploadReleaseAsset.and.returnValue(Promise.resolve);
-    getReleaseNotes = jasmine.createSpy();
+    getAutoReleaseNotes = jasmine.createSpy();
   });
 
   const run = async () => {
@@ -47,7 +47,7 @@ describe("recordRelease", () => {
       artifactClient,
       core,
       fs,
-      getReleaseNotes
+      getAutoReleaseNotes
     });
     await recordRelease();
   };
@@ -73,12 +73,13 @@ describe("recordRelease", () => {
     githubFacade.findIssueNumberByIssueTitle.and.returnValue(
       Promise.resolve(42)
     );
-    getReleaseNotes.and.returnValue(Promise.resolve("notes"));
+    getAutoReleaseNotes.and.returnValue(Promise.resolve("notes"));
     await run();
-    expect(githubFacade.createIssueComment).toHaveBeenCalledOnceWith(
+    expect(githubFacade.createIssueComment).toHaveBeenCalledWith(
       42,
-      "Released 1.2.3-alpha.0\n\nnotes"
+      "Released 1.2.3-alpha.0\n"
     );
+    expect(githubFacade.createIssueComment).toHaveBeenCalledWith(42, "notes");
   });
 
   it("closes the issue", async () => {
