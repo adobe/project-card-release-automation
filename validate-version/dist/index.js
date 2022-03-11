@@ -25,6 +25,7 @@ const assert = __nccwpck_require__(3036);
 const memoizeGetters = __nccwpck_require__(7600);
 const extractPullRequestType = __nccwpck_require__(3911);
 const injectExtractReferences = __nccwpck_require__(6450);
+const injectGetAutoReleaseNotes = __nccwpck_require__(2649);
 const injectGetReleaseNotes = __nccwpck_require__(4415);
 const injectGithubFacade = __nccwpck_require__(3045);
 const injectGithubPaginationFacade = __nccwpck_require__(4049);
@@ -76,6 +77,7 @@ module.exports = memoizeGetters({
     const {
       ref,
       eventName,
+      actor,
       payload: {
         project_card: {
           project_url: projectUrl,
@@ -94,12 +96,16 @@ module.exports = memoizeGetters({
     return {
       ref,
       eventName,
+      actor,
       projectUrl,
       columnUrl,
       contentUrl,
       repo,
       owner
     };
+  },
+  get actor() {
+    return this.githubContext.actor;
   },
   get contentUrl() {
     return this.githubContext.contentUrl;
@@ -143,6 +149,9 @@ module.exports = memoizeGetters({
   },
   get extractReferences() {
     return injectExtractReferences(this);
+  },
+  get getAutoReleaseNotes() {
+    return injectGetAutoReleaseNotes(this);
   },
   get getReleaseNotes() {
     return injectGetReleaseNotes(this);
@@ -258,6 +267,29 @@ module.exports = ({ referencePrefixes, referenceTargetUrlPrefix }) => {
       )
       .join("\n");
 };
+
+
+/***/ }),
+
+/***/ 2649:
+/***/ ((module) => {
+
+/*
+Copyright 2021 Adobe. All rights reserved.
+This file is licensed to you under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License. You may obtain a copy
+of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under
+the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+OF ANY KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+*/
+
+module.exports =
+  ({ githubFacade, version }) =>
+  async () =>
+    githubFacade.generateReleaseNotes(`v${version}`);
 
 
 /***/ }),
@@ -488,6 +520,52 @@ module.exports = ({
       data
     });
   },
+  async generateReleaseNotes(tagName) {
+    const {
+      data: { body }
+    } = await octokit.request(
+      `POST /repos/${owner}/${repo}/releases/generate-notes`,
+      {
+        tag_name: tagName
+      }
+    );
+    return body;
+  },
+  async findLastIssueCommentIdBy(issueNumber, author) {
+    const fetchIssueComments = await fs.readFile(
+      __nccwpck_require__.ab + "fetchIssueComments.graphql",
+      "utf8"
+    );
+    const allComments = await getAllMatchingGraphql(
+      async cursor => {
+        const {
+          repository: {
+            issueOrPullRequest: { comments }
+          }
+        } = await octokit.graphql(fetchIssueComments, {
+          owner,
+          repo,
+          issueNumber,
+          cursor
+        });
+        return comments;
+      },
+      ({
+        node: {
+          author: { login }
+        }
+      }) => login === author
+    );
+    const {
+      node: { databaseId }
+    } = allComments[allComments.length - 1];
+    return databaseId;
+  },
+  async deleteComment(commentId) {
+    return octokit.request(
+      `GET /repos/${owner}/${repo}/issues/comments/${commentId}`
+    );
+  },
   async findCommitWhereVersionChanged(ref) {
     const fetchChangesToPackageJson = await fs.readFile(
       __nccwpck_require__.ab + "fetchChangesToPackageJson.graphql",
@@ -605,8 +683,8 @@ module.exports = ({ octokit: { paginate } }) => ({
     let cursor = null;
     let done = false;
     while (!done) {
-      const { nodes, pageInfo } = await query(cursor);
-      for (const node of nodes) {
+      const { nodes, edges, pageInfo } = await query(cursor);
+      for (const node of nodes || edges) {
         if (!predicate(node)) {
           done = true;
           break;
@@ -834,19 +912,34 @@ const semver = __nccwpck_require__(1383);
 const path = __nccwpck_require__(5622);
 
 module.exports =
-  ({ githubFacade, version, artifactClient, core, fs, getReleaseNotes }) =>
+  ({
+    githubFacade,
+    version,
+    artifactClient,
+    core,
+    fs,
+    getAutoReleaseNotes,
+    actor
+  }) =>
   async () => {
     const issueTitle = semver.coerce(version).raw;
     const issueNumber = await githubFacade.findIssueNumberByIssueTitle(
       issueTitle
     );
 
+    core.info(`Deleting old release notes by ${actor}`);
+    try {
+      const oldReleaseNotesCommentId =
+        await githubFacade.findLastIssueCommentIdBy(issueNumber, actor);
+      await githubFacade.deleteComment(oldReleaseNotesCommentId);
+    } catch (e) {
+      core.info(`Error deleting old release notes:`, e);
+    }
+
     core.info(`Creating release comment on issue: ${issueNumber}`);
-    const releaseNotes = await getReleaseNotes();
-    await githubFacade.createIssueComment(
-      issueNumber,
-      `Released ${version}\n\n${releaseNotes}`
-    );
+    await githubFacade.createIssueComment(issueNumber, `Released ${version}\n`);
+    const releaseNotes = await getAutoReleaseNotes();
+    await githubFacade.createIssueComment(issueNumber, releaseNotes);
 
     const prerelease = semver.prerelease(version) !== null;
     if (!prerelease) {
