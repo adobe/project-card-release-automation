@@ -23,10 +23,6 @@ const core = __nccwpck_require__(2186);
 
 const assert = __nccwpck_require__(3036);
 const memoizeGetters = __nccwpck_require__(7600);
-const extractPullRequestType = __nccwpck_require__(3911);
-const injectExtractReferences = __nccwpck_require__(6450);
-const injectGetAutoReleaseNotes = __nccwpck_require__(2649);
-const injectGetReleaseNotes = __nccwpck_require__(4415);
 const injectGithubFacade = __nccwpck_require__(3045);
 const injectGithubPaginationFacade = __nccwpck_require__(4049);
 const injectHandleProjectCardMove = __nccwpck_require__(9704);
@@ -49,16 +45,6 @@ module.exports = memoizeGetters({
   // Action Inputs:
   get projectNumber() {
     return Number(this.core.getInput("projectNumber"));
-  },
-  get referencePrefixes() {
-    const referencePrefixes = this.core.getInput("referencePrefixes");
-    if (!referencePrefixes) {
-      return undefined;
-    }
-    return referencePrefixes.split(",");
-  },
-  get referenceTargetUrlPrefix() {
-    return this.core.getInput("referencesTargetUrlPrefix");
   },
   get releaseType() {
     return this.core.getInput("releaseType");
@@ -142,18 +128,6 @@ module.exports = memoizeGetters({
     return fs;
   },
   // Injected objects
-  get extractPullRequestType() {
-    return extractPullRequestType;
-  },
-  get extractReferences() {
-    return injectExtractReferences(this);
-  },
-  get getAutoReleaseNotes() {
-    return injectGetAutoReleaseNotes(this);
-  },
-  get getReleaseNotes() {
-    return injectGetReleaseNotes(this);
-  },
   get githubFacade() {
     return injectGithubFacade(this);
   },
@@ -182,177 +156,6 @@ module.exports = memoizeGetters({
     return injectValidateNewVersion(this);
   }
 });
-
-
-/***/ }),
-
-/***/ 3911:
-/***/ ((module) => {
-
-/*
-Copyright 2021 Adobe. All rights reserved.
-This file is licensed to you under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License. You may obtain a copy
-of the License at http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
-OF ANY KIND, either express or implied. See the License for the specific language
-governing permissions and limitations under the License.
-*/
-
-const PULL_REQUEST_TYPES = [
-  { name: "Breaking Change", regex: /- \[x\] Breaking change/ },
-  { name: "Feature", regex: /- \[x\] New feature/ },
-  { name: "Bug Fix", regex: /- \[x\] Bug fix/ },
-  { name: "Improvement", regex: /- \[x\] Improvement/ }
-];
-
-module.exports = body => {
-  const pullRequestType = PULL_REQUEST_TYPES.find(({ regex }) =>
-    regex.test(body)
-  );
-  return pullRequestType ? pullRequestType.name : "";
-};
-
-
-/***/ }),
-
-/***/ 6450:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-/*
-Copyright 2021 Adobe. All rights reserved.
-This file is licensed to you under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License. You may obtain a copy
-of the License at http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
-OF ANY KIND, either express or implied. See the License for the specific language
-governing permissions and limitations under the License.
-*/
-
-const buildMarkdownLink = __nccwpck_require__(6981);
-
-const NON_BREAKING_HYPHEN = "&#x2011;";
-
-module.exports = ({ referencePrefixes, referenceTargetUrlPrefix }) => {
-  if (!Array.isArray(referencePrefixes)) {
-    return () => "";
-  }
-
-  const referenceRegex = new RegExp(
-    `(${referencePrefixes.join("|")})[0-9]+`,
-    "g"
-  );
-
-  return (...texts) =>
-    texts
-      .reduce((references, text) => {
-        (text.match(referenceRegex) || []).forEach(match => {
-          if (!references.includes(match)) {
-            references.push(match);
-          }
-        });
-        return references;
-      }, [])
-      .map(reference =>
-        buildMarkdownLink(
-          reference.replace("-", NON_BREAKING_HYPHEN),
-          `${referenceTargetUrlPrefix}${reference}`
-        )
-      )
-      .join("\n");
-};
-
-
-/***/ }),
-
-/***/ 2649:
-/***/ ((module) => {
-
-/*
-Copyright 2021 Adobe. All rights reserved.
-This file is licensed to you under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License. You may obtain a copy
-of the License at http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
-OF ANY KIND, either express or implied. See the License for the specific language
-governing permissions and limitations under the License.
-*/
-
-module.exports =
-  ({ githubFacade, version }) =>
-  async () =>
-    githubFacade.generateReleaseNotes(`v${version}`);
-
-
-/***/ }),
-
-/***/ 4415:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-/*
-Copyright 2021 Adobe. All rights reserved.
-This file is licensed to you under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License. You may obtain a copy
-of the License at http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
-OF ANY KIND, either express or implied. See the License for the specific language
-governing permissions and limitations under the License.
-*/
-
-const buildMarkdownTable = __nccwpck_require__(623);
-const buildMarkdownLink = __nccwpck_require__(6981);
-const firstLine = __nccwpck_require__(7918);
-
-module.exports =
-  ({ githubFacade, ref, extractReferences, extractPullRequestType }) =>
-  async () => {
-    const lastReleaseCommit = await githubFacade.findCommitWhereVersionChanged(
-      ref
-    );
-    const history = await githubFacade.fetchCommitHistoryUntil(
-      ref,
-      lastReleaseCommit.oid
-    );
-    const pullRequestNumbersAlreadyProcessed = [];
-    const header = ["Link", "Description", "Author", "Type", "Issue(s)"];
-    const rows = [];
-    history.forEach(commit => {
-      if (commit.associatedPullRequests.nodes.length === 0) {
-        // commit with no PR
-        rows.push([
-          buildMarkdownLink(commit.oid.substring(0, 7), commit.url),
-          firstLine(commit.message),
-          commit.author.user && commit.author.user.login,
-          "",
-          extractReferences(commit.message)
-        ]);
-      } else {
-        // commit with PR(s)
-        commit.associatedPullRequests.nodes.forEach(pr => {
-          if (!pullRequestNumbersAlreadyProcessed.includes(pr.number)) {
-            pullRequestNumbersAlreadyProcessed.push(pr.number);
-            rows.push([
-              buildMarkdownLink(`#${pr.number}`, pr.permalink),
-              pr.title,
-              pr.author.login,
-              extractPullRequestType(pr.body),
-              extractReferences(pr.title, pr.body)
-            ]);
-          }
-        });
-      }
-    });
-
-    return buildMarkdownTable(header, rows);
-  };
 
 
 /***/ }),
@@ -915,19 +718,10 @@ const path = __nccwpck_require__(5622);
 const buildMarkdownLink = __nccwpck_require__(6981);
 
 module.exports =
-  ({
-    githubFacade,
-    version,
-    artifactClient,
-    core,
-    fs,
-    getAutoReleaseNotes,
-    owner,
-    repo
-  }) =>
+  ({ githubFacade, version, artifactClient, core, fs, owner, repo }) =>
   async () => {
     const prerelease = semver.prerelease(version) !== null;
-    const releaseNotes = await getAutoReleaseNotes();
+    const releaseNotes = await githubFacade.generateReleaseNotes(`v${version}`);
     const uploadUrl = await githubFacade.createRelease({
       tagName: `v${version}`,
       name: version,
@@ -1073,8 +867,9 @@ module.exports =
 
     const packageVersion = await githubFacade.getPackageVersion(ref);
 
+    // We use greater than or equal to here so that you can re-run a previously failed workflow.
     assert(
-      semver.gt(version, packageVersion),
+      semver.gte(version, packageVersion),
       `Versions must be increasing. Attempted ${packageVersion} => ${version}`
     );
   };
@@ -1126,61 +921,6 @@ governing permissions and limitations under the License.
 const escapeLinkText = text => text.replace(/\[/, "\\[").replace(/\]/, "\\]");
 
 module.exports = (text, url) => `[${escapeLinkText(text)}](${url})`;
-
-
-/***/ }),
-
-/***/ 623:
-/***/ ((module) => {
-
-/*
-Copyright 2021 Adobe. All rights reserved.
-This file is licensed to you under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License. You may obtain a copy
-of the License at http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
-OF ANY KIND, either express or implied. See the License for the specific language
-governing permissions and limitations under the License.
-*/
-
-const escapeTableCell = cell =>
-  `${cell}`.replace(/\|/g, "|").replace(/(\r\n|\r|\n)/g, "<br/>");
-
-module.exports = (header, rows) => {
-  const lineRow = Array(header.length).fill("---");
-
-  return `${[header, lineRow, ...rows]
-    .map(row => row.map(escapeTableCell).join("|"))
-    .join("\n")}\n`;
-};
-
-
-/***/ }),
-
-/***/ 7918:
-/***/ ((module) => {
-
-/*
-Copyright 2021 Adobe. All rights reserved.
-This file is licensed to you under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License. You may obtain a copy
-of the License at http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under
-the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
-OF ANY KIND, either express or implied. See the License for the specific language
-governing permissions and limitations under the License.
-*/
-
-module.exports = string => {
-  const newlineIndex = string.search(/(\r\n|\r|\n)/);
-  if (newlineIndex === -1) {
-    return string;
-  }
-  return string.substring(0, newlineIndex);
-};
 
 
 /***/ }),
