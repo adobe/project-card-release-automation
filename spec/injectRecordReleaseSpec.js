@@ -20,7 +20,6 @@ describe("recordRelease", () => {
   let version;
   let fs;
   let core;
-  let getAutoReleaseNotes;
 
   beforeEach(() => {
     githubFacade = jasmine.createSpyObj("githubFacade", [
@@ -28,7 +27,8 @@ describe("recordRelease", () => {
       "createIssueComment",
       "closeIssue",
       "createRelease",
-      "uploadReleaseAsset"
+      "uploadReleaseAsset",
+      "generateReleaseNotes"
     ]);
     artifactClient = jasmine.createSpyObj("artifactClient", [
       "downloadAllArtifacts"
@@ -37,7 +37,6 @@ describe("recordRelease", () => {
     fs = jasmine.createSpyObj("fs", ["readdir"]);
     core = jasmine.createSpyObj("core", ["info"]);
     githubFacade.uploadReleaseAsset.and.returnValue(Promise.resolve);
-    getAutoReleaseNotes = jasmine.createSpy();
   });
 
   const run = async () => {
@@ -47,7 +46,8 @@ describe("recordRelease", () => {
       artifactClient,
       core,
       fs,
-      getAutoReleaseNotes
+      owner: "myowner",
+      repo: "myrepo"
     });
     await recordRelease();
   };
@@ -73,13 +73,11 @@ describe("recordRelease", () => {
     githubFacade.findIssueNumberByIssueTitle.and.returnValue(
       Promise.resolve(42)
     );
-    getAutoReleaseNotes.and.returnValue(Promise.resolve("notes"));
     await run();
-    expect(githubFacade.createIssueComment).toHaveBeenCalledWith(
+    expect(githubFacade.createIssueComment).toHaveBeenCalledOnceWith(
       42,
-      "Released 1.2.3-alpha.0\n"
+      "Released [1.2.3-alpha.0](/myowner/myrepo/releases/tag/v1.2.3-alpha.0)\n"
     );
-    expect(githubFacade.createIssueComment).toHaveBeenCalledWith(42, "notes");
   });
 
   it("closes the issue", async () => {
@@ -102,22 +100,28 @@ describe("recordRelease", () => {
 
   it("creates a final release", async () => {
     version = "1.2.3";
+    githubFacade.generateReleaseNotes.and.returnValue(
+      Promise.resolve("mynotes")
+    );
     await run();
     expect(githubFacade.createRelease).toHaveBeenCalledOnceWith({
       tagName: "v1.2.3",
       name: "1.2.3",
-      body: "1.2.3",
+      body: "mynotes",
       prerelease: false
     });
   });
 
   it("creates a prerelease", async () => {
     version = "1.2.3-beta.3";
+    githubFacade.generateReleaseNotes.and.returnValue(
+      Promise.resolve("mynotes")
+    );
     await run();
     expect(githubFacade.createRelease).toHaveBeenCalledOnceWith({
       tagName: "v1.2.3-beta.3",
       name: "1.2.3-beta.3",
-      body: "1.2.3-beta.3",
+      body: "mynotes",
       prerelease: true
     });
   });
