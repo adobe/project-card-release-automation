@@ -7,12 +7,6 @@ inputs:
   token:
     description: 'The github token to use'
     required: true
-  referencePrefixes:
-    description: 'A list of comma separated prefixes. Any of these prefixes follow by a number will generate a link in the release notes table'
-    required: false
-  referenceTargetUrlPrefix:
-    description: 'This url will be appended by the reference found using referencePrefixes'
-    required: false
 runs:
   using: 'node12'
   main: 'dist/index.js'

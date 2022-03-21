@@ -1,0 +1,23 @@
+query fetchIssueComments ($repo:String!, $owner:String!, $issueNumber:Int!, $cursor:String) {
+  repository(name: $repo, owner: $owner) {
+    issueOrPullRequest(number: $issueNumber) {
+      ... on Issue {
+        comments(first: 20, after: $cursor) {
+          edges {
+            node {
+              databaseId
+              author {
+                login
+              }
+              body
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }
+  }
+}
