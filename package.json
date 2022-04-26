@@ -36,7 +36,7 @@
   "homepage": "https://github.com/jonsnyder/project-card-release-automation#readme",
   "dependencies": {
     "@actions/artifact": "^0.5.1",
-    "@actions/core": "^1.2.7",
+    "@actions/core": "^1.7.0",
     "@actions/github": "^4.0.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-config-prettier": "^8.3.0",
